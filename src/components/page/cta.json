@@ -1,0 +1,21 @@
+{
+  "collectionName": "components_page_ctas",
+  "info": {
+    "displayName": "Cta",
+    "description": "Call-to-action block"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "buttonText": {
+      "type": "string"
+    },
+    "buttonLink": {
+      "type": "string"
+    }
+  },
+  "config": {}
+}

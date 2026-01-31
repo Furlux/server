@@ -1,0 +1,14 @@
+{
+  "collectionName": "components_page_text_blocks",
+  "info": {
+    "displayName": "Text Block",
+    "description": "Rich text content block"
+  },
+  "options": {},
+  "attributes": {
+    "content": {
+      "type": "blocks"
+    }
+  },
+  "config": {}
+}

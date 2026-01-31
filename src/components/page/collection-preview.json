@@ -1,0 +1,23 @@
+{
+  "collectionName": "components_page_collection_previews",
+  "info": {
+    "displayName": "Collection Preview",
+    "description": "Shows a preview of products from a specific category with optional filters"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "category": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::category.category"
+    },
+    "filtersPreset": {
+      "type": "json"
+    }
+  },
+  "config": {}
+}

@@ -1,0 +1,25 @@
+{
+  "collectionName": "components_page_heroes",
+  "info": {
+    "displayName": "Hero",
+    "description": "Hero section for dynamic pages"
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "subtitle": {
+      "type": "string"
+    },
+    "image": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images"
+      ]
+    }
+  },
+  "config": {}
+}
