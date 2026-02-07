@@ -1,5 +1,18 @@
 import type { Schema, Struct } from '@strapi/strapi';
 
+export interface LogoLogo extends Struct.ComponentSchema {
+  collectionName: 'components_logo_logos';
+  info: {
+    displayName: 'logo';
+  };
+  attributes: {
+    asset: Schema.Attribute.Media<'images'>;
+    name: Schema.Attribute.String;
+    position: Schema.Attribute.Enumeration<['left', 'right']> &
+      Schema.Attribute.DefaultTo<'left'>;
+  };
+}
+
 export interface PageCollectionPreview extends Struct.ComponentSchema {
   collectionName: 'components_page_collection_previews';
   info: {
@@ -76,6 +89,7 @@ export interface PageTextBlock extends Struct.ComponentSchema {
 declare module '@strapi/strapi' {
   export module Public {
     export interface ComponentSchemas {
+      'logo.logo': LogoLogo;
       'page.collection-preview': PageCollectionPreview;
       'page.cta': PageCta;
       'page.faq': PageFaq;
