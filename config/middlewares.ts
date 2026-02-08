@@ -11,8 +11,8 @@ export default [
   {
     name: 'global::telegram-auth',
     config: {
-      enabled: true,
-      publicRoutes: ['/api/products', '/api/pages', '/api/filters'],
+      enabled: false,
+      publicRoutes: ['/api/products', '/api/page', '/api/filters'],
     },
   },
   'strapi::public',
