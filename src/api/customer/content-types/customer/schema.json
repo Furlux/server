@@ -1,0 +1,52 @@
+{
+  "kind": "collectionType",
+  "collectionName": "customers",
+  "info": {
+    "singularName": "customer",
+    "pluralName": "customers",
+    "displayName": "Customers"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "telegramUserId": {
+      "type": "biginteger",
+      "required": true
+    },
+    "firstName": {
+      "type": "string",
+      "required": true
+    },
+    "lastName": {
+      "type": "string",
+      "required": true
+    },
+    "phone": {
+      "type": "string",
+      "required": true
+    },
+    "email": {
+      "type": "email"
+    },
+    "city": {
+      "type": "string",
+      "required": true
+    },
+    "deliveryMethod": {
+      "type": "enumeration",
+      "enum": ["nova-poshta-warehouse", "nova-poshta-address"],
+      "required": true
+    },
+    "warehouseNumber": {
+      "type": "string"
+    },
+    "streetAddress": {
+      "type": "string"
+    },
+    "comment": {
+      "type": "text"
+    }
+  }
+}

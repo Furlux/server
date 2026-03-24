@@ -1,0 +1,23 @@
+{
+  "kind": "collectionType",
+  "collectionName": "favorites",
+  "info": {
+    "singularName": "favorite",
+    "pluralName": "favorites",
+    "displayName": "Favorites"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "telegramUserId": {
+      "type": "biginteger",
+      "required": true
+    },
+    "productSlug": {
+      "type": "string",
+      "required": true
+    }
+  }
+}

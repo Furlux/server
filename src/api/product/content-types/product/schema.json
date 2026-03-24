@@ -27,6 +27,9 @@
       "type": "decimal",
       "required": true
     },
+    "salePrice": {
+      "type": "decimal"
+    },
     "images": {
       "type": "media",
       "multiple": true,
@@ -52,23 +55,84 @@
     "isNew": {
       "type": "boolean"
     },
+    "isFeatured": {
+      "type": "boolean",
+      "default": false
+    },
     "brand": {
       "type": "string"
     },
-    "color": {
-      "type": "string"
-    },
     "lensType": {
-      "type": "string"
+      "type": "enumeration",
+      "enum": [
+        "gradient",
+        "polarized"
+      ]
     },
     "uvProtection": {
       "type": "string"
     },
     "gender": {
-      "type": "string"
+      "type": "enumeration",
+      "enum": [
+        "children",
+        "women",
+        "men",
+        "unisex"
+      ]
     },
     "shape": {
-      "type": "string"
+      "type": "enumeration",
+      "enum": [
+        "aviator",
+        "square",
+        "round",
+        "cat-eye",
+        "panto",
+        "mask",
+        "rounded",
+        "butterfly",
+        "non-standard",
+        "oval",
+        "rectangular"
+      ]
+    },
+    "collectionYear": {
+      "type": "enumeration",
+      "enum": [
+        "y2025",
+        "y2026"
+      ]
+    },
+    "frameMaterial": {
+      "type": "enumeration",
+      "enum": [
+        "acetate",
+        "metal",
+        "plastic",
+        "titanium"
+      ]
+    },
+    "lensMaterial": {
+      "type": "enumeration",
+      "enum": [
+        "mineral",
+        "glass"
+      ]
+    },
+    "photoFormat": {
+      "type": "enumeration",
+      "enum": [
+        "catalog",
+        "standard",
+        "legacy"
+      ],
+      "default": "standard"
+    },
+    "variants": {
+      "type": "component",
+      "repeatable": true,
+      "component": "product.product-variant"
     }
   }
 }

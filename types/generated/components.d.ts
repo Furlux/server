@@ -86,6 +86,18 @@ export interface PageTextBlock extends Struct.ComponentSchema {
   };
 }
 
+export interface ProductProductVariant extends Struct.ComponentSchema {
+  collectionName: 'components_product_product_variants';
+  info: {
+    description: 'Color variant for catalog-format products';
+    displayName: 'Product Variant';
+  };
+  attributes: {
+    code: Schema.Attribute.String & Schema.Attribute.Required;
+    label: Schema.Attribute.String & Schema.Attribute.Required;
+  };
+}
+
 declare module '@strapi/strapi' {
   export module Public {
     export interface ComponentSchemas {
@@ -96,6 +108,7 @@ declare module '@strapi/strapi' {
       'page.hero': PageHero;
       'page.image-block': PageImageBlock;
       'page.text-block': PageTextBlock;
+      'product.product-variant': ProductProductVariant;
     }
   }
 }
