@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_product_product_variants",
+  "info": {
+    "displayName": "Product Variant",
+    "description": "Color variant for catalog-format products"
+  },
+  "options": {},
+  "attributes": {
+    "code": {
+      "type": "string",
+      "required": true
+    },
+    "label": {
+      "type": "string",
+      "required": true
+    }
+  }
+}
