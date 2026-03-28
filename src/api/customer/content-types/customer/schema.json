@@ -39,6 +39,9 @@
       "enum": ["nova-poshta-warehouse", "nova-poshta-address"],
       "required": true
     },
+    "cityRef": {
+      "type": "string"
+    },
     "warehouseNumber": {
       "type": "string"
     },
