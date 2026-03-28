@@ -9,6 +9,13 @@ const MONO_STATUS_MAP: Record<string, string> = {
   expired: 'cancelled',
 };
 
+const MONO_PAYMENT_STATUS_MAP: Record<string, string> = {
+  success: 'paid',
+  failure: 'failed',
+  reversed: 'failed',
+  expired: 'failed',
+};
+
 export default factories.createCoreService('api::order.order', ({ strapi }) => ({
   // inputs order object, does create Mono invoice via API, returns { pageUrl, invoiceId }
   async createMonoInvoice(order) {
@@ -88,6 +95,7 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
 
     const order = orders[0];
     const newStatus = MONO_STATUS_MAP[status];
+    const newPaymentStatus = MONO_PAYMENT_STATUS_MAP[status];
 
     if (!newStatus) {
       strapi.log.info(`Mono webhook: unmapped status "${status}" for order ${order.documentId}`);
@@ -96,7 +104,10 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
 
     await strapi.documents('api::order.order').update({
       documentId: order.documentId,
-      data: { status: newStatus as 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' },
+      data: {
+        status: newStatus as 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled',
+        paymentStatus: (newPaymentStatus ?? 'pending') as 'pending' | 'paid' | 'failed',
+      },
     });
 
     strapi.log.info(`Order ${order.documentId} status updated to "${newStatus}" via Mono webhook`);

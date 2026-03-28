@@ -68,6 +68,11 @@
     },
     "monoInvoiceId": {
       "type": "string"
+    },
+    "paymentStatus": {
+      "type": "enumeration",
+      "enum": ["pending", "paid", "failed"],
+      "default": "pending"
     }
   }
 }
