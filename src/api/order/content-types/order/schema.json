@@ -59,6 +59,15 @@
     },
     "streetAddress": {
       "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "comment": {
+      "type": "text"
+    },
+    "monoInvoiceId": {
+      "type": "string"
     }
   }
 }

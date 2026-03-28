@@ -578,6 +578,7 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
   };
   attributes: {
     city: Schema.Attribute.String & Schema.Attribute.Required;
+    comment: Schema.Attribute.Text;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -586,12 +587,14 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
       ['nova-poshta-warehouse', 'nova-poshta-address']
     > &
       Schema.Attribute.Required;
+    email: Schema.Attribute.String;
     firstName: Schema.Attribute.String & Schema.Attribute.Required;
     items: Schema.Attribute.JSON & Schema.Attribute.Required;
     lastName: Schema.Attribute.String & Schema.Attribute.Required;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::order.order'> &
       Schema.Attribute.Private;
+    monoInvoiceId: Schema.Attribute.String;
     phone: Schema.Attribute.String & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
     status: Schema.Attribute.Enumeration<
