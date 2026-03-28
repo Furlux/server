@@ -24,20 +24,17 @@
       "required": true
     },
     "phone": {
-      "type": "string",
-      "required": true
+      "type": "string"
     },
     "email": {
       "type": "email"
     },
     "city": {
-      "type": "string",
-      "required": true
+      "type": "string"
     },
     "deliveryMethod": {
       "type": "enumeration",
-      "enum": ["nova-poshta-warehouse", "nova-poshta-address"],
-      "required": true
+      "enum": ["nova-poshta-warehouse", "nova-poshta-address"]
     },
     "cityRef": {
       "type": "string"
