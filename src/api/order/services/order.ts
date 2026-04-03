@@ -26,6 +26,7 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
 
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
     const serverUrl = strapi.config.get('server.url') || process.env.SERVER_URL || 'http://localhost:1337';
+    const botUsername = process.env.BOT_USERNAME;
 
     const amount = Math.round(order.totalPrice * 100);
 
@@ -47,7 +48,9 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
         destination: `Замовлення #${order.id}`,
         basketOrder,
       },
-      redirectUrl: `${clientUrl}/profile/orders/${order.documentId}`,
+      redirectUrl: botUsername
+        ? `https://t.me/${botUsername}?startapp=order_${order.documentId}`
+        : `${clientUrl}/profile/orders/${order.documentId}`,
       webhookUrl: `${serverUrl}/api/orders/mono-webhook`,
     };
 

@@ -62,6 +62,9 @@
     "brand": {
       "type": "string"
     },
+    "articleNumber": {
+      "type": "string"
+    },
     "lensType": {
       "type": "enumeration",
       "enum": [
