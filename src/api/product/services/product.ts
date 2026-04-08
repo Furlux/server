@@ -18,20 +18,20 @@ export default factories.createCoreService('api::product.product', ({ strapi }) 
       priceRow,
       discountRows,
     ] = await Promise.all([
-      db('products').distinct('gender').whereNotNull('gender').where('gender', '!=', '').where('status', 'active'),
-      db('products').distinct('shape').whereNotNull('shape').where('shape', '!=', '').where('status', 'active'),
-      db('products').distinct('collection_year').whereNotNull('collection_year').where('collection_year', '!=', '').where('status', 'active'),
-      db('products').distinct('frame_material').whereNotNull('frame_material').where('frame_material', '!=', '').where('status', 'active'),
-      db('products').distinct('lens_type').whereNotNull('lens_type').where('lens_type', '!=', '').where('status', 'active'),
-      db('products').distinct('lens_material').whereNotNull('lens_material').where('lens_material', '!=', '').where('status', 'active'),
+      db('products').distinct('gender').whereNotNull('gender').where('gender', '!=', '').where('product_status', 'active'),
+      db('products').distinct('shape').whereNotNull('shape').where('shape', '!=', '').where('product_status', 'active'),
+      db('products').distinct('collection_year').whereNotNull('collection_year').where('collection_year', '!=', '').where('product_status', 'active'),
+      db('products').distinct('frame_material').whereNotNull('frame_material').where('frame_material', '!=', '').where('product_status', 'active'),
+      db('products').distinct('lens_type').whereNotNull('lens_type').where('lens_type', '!=', '').where('product_status', 'active'),
+      db('products').distinct('lens_material').whereNotNull('lens_material').where('lens_material', '!=', '').where('product_status', 'active'),
       db('products')
-        .where('status', 'active')
+        .where('product_status', 'active')
         .where('price', '>', 0)
         .min({ min: db.raw('COALESCE(sale_price, price)') })
         .max({ max: db.raw('COALESCE(sale_price, price)') })
         .first(),
       db('products')
-        .where('status', 'active')
+        .where('product_status', 'active')
         .whereNotNull('sale_price')
         .where('sale_price', '>', 0)
         .whereRaw('sale_price < price')

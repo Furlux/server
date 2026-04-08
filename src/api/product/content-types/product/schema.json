@@ -139,7 +139,7 @@
       "repeatable": true,
       "component": "product.product-variant"
     },
-    "status": {
+    "productStatus": {
       "type": "enumeration",
       "enum": ["active", "archive"],
       "default": "active"

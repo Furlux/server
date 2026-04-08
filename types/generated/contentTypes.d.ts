@@ -749,6 +749,8 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.DefaultTo<'standard'>;
     price: Schema.Attribute.Decimal & Schema.Attribute.Required;
+    productStatus: Schema.Attribute.Enumeration<['active', 'archive']> &
+      Schema.Attribute.DefaultTo<'active'>;
     publishedAt: Schema.Attribute.DateTime;
     salePrice: Schema.Attribute.Decimal;
     shape: Schema.Attribute.Enumeration<
@@ -767,8 +769,6 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
       ]
     >;
     slug: Schema.Attribute.UID<'title'> & Schema.Attribute.Required;
-    status: Schema.Attribute.Enumeration<['active', 'archive']> &
-      Schema.Attribute.DefaultTo<'active'>;
     stockQuantity: Schema.Attribute.Integer;
     supplierCode: Schema.Attribute.String;
     title: Schema.Attribute.String & Schema.Attribute.Required;
