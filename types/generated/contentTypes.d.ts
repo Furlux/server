@@ -591,6 +591,18 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
     email: Schema.Attribute.String;
     firstName: Schema.Attribute.String & Schema.Attribute.Required;
     items: Schema.Attribute.JSON & Schema.Attribute.Required;
+    itemsSummary: Schema.Attribute.Text &
+      Schema.Attribute.SetPluginOptions<{
+        'content-manager': {
+          editable: false;
+        };
+      }>;
+    label: Schema.Attribute.String &
+      Schema.Attribute.SetPluginOptions<{
+        'content-manager': {
+          editable: false;
+        };
+      }>;
     lastName: Schema.Attribute.String & Schema.Attribute.Required;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::order.order'> &
@@ -658,6 +670,37 @@ export interface ApiPagePage extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiProductOptionProductOption
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'product_options';
+  info: {
+    displayName: 'Product Options';
+    pluralName: 'product-options';
+    singularName: 'product-option';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    label: Schema.Attribute.String & Schema.Attribute.Required;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::product-option.product-option'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    type: Schema.Attribute.String & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    value: Schema.Attribute.String & Schema.Attribute.Required;
+  };
+}
+
 export interface ApiProductProduct extends Struct.CollectionTypeSchema {
   collectionName: 'products';
   info: {
@@ -674,14 +717,14 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
     available: Schema.Attribute.Boolean;
     brand: Schema.Attribute.String;
     category: Schema.Attribute.Relation<'manyToOne', 'api::category.category'>;
-    collectionYear: Schema.Attribute.Enumeration<['y2025', 'y2026']>;
+    collectionYear: Schema.Attribute.String;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     currency: Schema.Attribute.String;
     description: Schema.Attribute.Blocks;
     frameMaterial: Schema.Attribute.Enumeration<
-      ['acetate', 'metal', 'plastic', 'titanium']
+      ['metal', 'plastic', 'acetate', 'titanium', 'mixed']
     >;
     gender: Schema.Attribute.Enumeration<
       ['children', 'women', 'men', 'unisex']
@@ -689,8 +732,12 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
     images: Schema.Attribute.Media<'images', true>;
     isFeatured: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     isNew: Schema.Attribute.Boolean;
-    lensMaterial: Schema.Attribute.Enumeration<['mineral', 'glass']>;
-    lensType: Schema.Attribute.Enumeration<['gradient', 'polarized']>;
+    lensMaterial: Schema.Attribute.Enumeration<
+      ['mineral', 'glass', 'polycarbonate', 'nylon']
+    >;
+    lensType: Schema.Attribute.Enumeration<
+      ['gradient', 'polarized', 'mirrored', 'photochromic', 'solid']
+    >;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -706,20 +753,24 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
     salePrice: Schema.Attribute.Decimal;
     shape: Schema.Attribute.Enumeration<
       [
-        'aviator',
         'square',
+        'aviator',
         'round',
         'cat-eye',
-        'panto',
-        'mask',
-        'rounded',
-        'butterfly',
-        'non-standard',
-        'oval',
         'rectangular',
+        'oval',
+        'mask',
+        'butterfly',
+        'rounded',
+        'panto',
+        'non-standard',
       ]
     >;
     slug: Schema.Attribute.UID<'title'> & Schema.Attribute.Required;
+    status: Schema.Attribute.Enumeration<['active', 'archive']> &
+      Schema.Attribute.DefaultTo<'active'>;
+    stockQuantity: Schema.Attribute.Integer;
+    supplierCode: Schema.Attribute.String;
     title: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -1245,6 +1296,7 @@ declare module '@strapi/strapi' {
       'api::global.global': ApiGlobalGlobal;
       'api::order.order': ApiOrderOrder;
       'api::page.page': ApiPagePage;
+      'api::product-option.product-option': ApiProductOptionProductOption;
       'api::product.product': ApiProductProduct;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;

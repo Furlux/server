@@ -114,5 +114,30 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
     });
 
     strapi.log.info(`Order ${order.documentId} status updated to "${newStatus}" via Mono webhook`);
+
+    type TOrderItem = { productSlug?: string | null; quantity: number };
+    const items = Array.isArray(order.items) ? (order.items as TOrderItem[]) : [];
+
+    if (status === 'success' && items.length > 0) {
+      for (const item of items) {
+        if (!item.productSlug) continue;
+
+        const products = await strapi.documents('api::product.product').findMany({
+          filters: { slug: { $eq: item.productSlug } },
+          limit: 1,
+        });
+
+        const product = products[0];
+        if (!product || product.stockQuantity == null) continue;
+
+        const newQty = Math.max(0, (product.stockQuantity ?? 0) - item.quantity);
+        await strapi.documents('api::product.product').update({
+          documentId: product.documentId,
+          data: { stockQuantity: newQty },
+        });
+
+        strapi.log.info(`Stock updated for "${item.productSlug}": ${product.stockQuantity} → ${newQty}`);
+      }
+    }
   },
 }));

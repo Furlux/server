@@ -69,7 +69,10 @@
       "type": "enumeration",
       "enum": [
         "gradient",
-        "polarized"
+        "polarized",
+        "mirrored",
+        "photochromic",
+        "solid"
       ]
     },
     "uvProtection": {
@@ -87,40 +90,39 @@
     "shape": {
       "type": "enumeration",
       "enum": [
-        "aviator",
         "square",
+        "aviator",
         "round",
         "cat-eye",
-        "panto",
-        "mask",
-        "rounded",
-        "butterfly",
-        "non-standard",
+        "rectangular",
         "oval",
-        "rectangular"
+        "mask",
+        "butterfly",
+        "rounded",
+        "panto",
+        "non-standard"
       ]
     },
     "collectionYear": {
-      "type": "enumeration",
-      "enum": [
-        "y2025",
-        "y2026"
-      ]
+      "type": "string"
     },
     "frameMaterial": {
       "type": "enumeration",
       "enum": [
-        "acetate",
         "metal",
         "plastic",
-        "titanium"
+        "acetate",
+        "titanium",
+        "mixed"
       ]
     },
     "lensMaterial": {
       "type": "enumeration",
       "enum": [
         "mineral",
-        "glass"
+        "glass",
+        "polycarbonate",
+        "nylon"
       ]
     },
     "photoFormat": {
@@ -136,6 +138,17 @@
       "type": "component",
       "repeatable": true,
       "component": "product.product-variant"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["active", "archive"],
+      "default": "active"
+    },
+    "supplierCode": {
+      "type": "string"
+    },
+    "stockQuantity": {
+      "type": "integer"
     }
   }
 }

@@ -76,6 +76,18 @@
       "type": "enumeration",
       "enum": ["pending", "paid", "failed"],
       "default": "pending"
+    },
+    "label": {
+      "type": "string",
+      "pluginOptions": {
+        "content-manager": { "editable": false }
+      }
+    },
+    "itemsSummary": {
+      "type": "text",
+      "pluginOptions": {
+        "content-manager": { "editable": false }
+      }
     }
   }
 }
