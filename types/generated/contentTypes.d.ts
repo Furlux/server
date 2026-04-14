@@ -533,39 +533,6 @@ export interface ApiFavoriteFavorite extends Struct.CollectionTypeSchema {
   };
 }
 
-export interface ApiGlobalGlobal extends Struct.SingleTypeSchema {
-  collectionName: 'globals';
-  info: {
-    displayName: 'Global';
-    pluralName: 'globals';
-    singularName: 'global';
-  };
-  options: {
-    draftAndPublish: true;
-  };
-  attributes: {
-    createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    locale: Schema.Attribute.String & Schema.Attribute.Private;
-    localizations: Schema.Attribute.Relation<
-      'oneToMany',
-      'api::global.global'
-    > &
-      Schema.Attribute.Private;
-    logo: Schema.Attribute.Component<'logo.logo', false>;
-    publishedAt: Schema.Attribute.DateTime;
-    siteDescription: Schema.Attribute.Text;
-    siteName: Schema.Attribute.String;
-    sitePhone: Schema.Attribute.String;
-    theme: Schema.Attribute.Enumeration<['light', 'dark']> &
-      Schema.Attribute.DefaultTo<'light'>;
-    updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-  };
-}
-
 export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
   collectionName: 'orders';
   info: {
@@ -1302,7 +1269,6 @@ declare module '@strapi/strapi' {
       'api::category.category': ApiCategoryCategory;
       'api::customer.customer': ApiCustomerCustomer;
       'api::favorite.favorite': ApiFavoriteFavorite;
-      'api::global.global': ApiGlobalGlobal;
       'api::order.order': ApiOrderOrder;
       'api::page.page': ApiPagePage;
       'api::product-option.product-option': ApiProductOptionProductOption;
