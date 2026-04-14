@@ -55,10 +55,6 @@
     "isNew": {
       "type": "boolean"
     },
-    "isFeatured": {
-      "type": "boolean",
-      "default": false
-    },
     "articleNumber": {
       "type": "string"
     },
