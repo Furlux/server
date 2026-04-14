@@ -59,23 +59,7 @@
       "type": "boolean",
       "default": false
     },
-    "brand": {
-      "type": "string"
-    },
     "articleNumber": {
-      "type": "string"
-    },
-    "lensType": {
-      "type": "enumeration",
-      "enum": [
-        "gradient",
-        "polarized",
-        "mirrored",
-        "photochromic",
-        "solid"
-      ]
-    },
-    "uvProtection": {
       "type": "string"
     },
     "gender": {
@@ -85,44 +69,6 @@
         "women",
         "men",
         "unisex"
-      ]
-    },
-    "shape": {
-      "type": "enumeration",
-      "enum": [
-        "square",
-        "aviator",
-        "round",
-        "cat-eye",
-        "rectangular",
-        "oval",
-        "mask",
-        "butterfly",
-        "rounded",
-        "panto",
-        "non-standard"
-      ]
-    },
-    "collectionYear": {
-      "type": "string"
-    },
-    "frameMaterial": {
-      "type": "enumeration",
-      "enum": [
-        "metal",
-        "plastic",
-        "acetate",
-        "titanium",
-        "mixed"
-      ]
-    },
-    "lensMaterial": {
-      "type": "enumeration",
-      "enum": [
-        "mineral",
-        "glass",
-        "polycarbonate",
-        "nylon"
       ]
     },
     "photoFormat": {
@@ -149,6 +95,32 @@
     },
     "stockQuantity": {
       "type": "integer"
+    },
+    "sizes": {
+      "type": "string"
+    },
+    "lensType": {
+      "type": "enumeration",
+      "enum": ["поляризовані", "сонцезахисні", "хамелеон", "комп'ютер", "нейлон"]
+    },
+    "isBrand": {
+      "type": "boolean",
+      "default": false
+    },
+    "frameType": {
+      "type": "enumeration",
+      "enum": ["метал", "пластик", "безоправні", "комбінована"]
+    },
+    "color": {
+      "type": "json"
+    },
+    "frameShape": {
+      "type": "enumeration",
+      "enum": ["авіатор", "ромби", "навігатор", "круглі", "прямокутник", "квадрат", "трапеція", "багатокутник", "оверсайз", "маска", "кішка"]
+    },
+    "hasClipon": {
+      "type": "boolean",
+      "default": false
     }
   }
 }

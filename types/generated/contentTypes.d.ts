@@ -715,28 +715,52 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
     articleNumber: Schema.Attribute.String;
     attributes: Schema.Attribute.JSON;
     available: Schema.Attribute.Boolean;
-    brand: Schema.Attribute.String;
     category: Schema.Attribute.Relation<'manyToOne', 'api::category.category'>;
-    collectionYear: Schema.Attribute.String;
+    color: Schema.Attribute.JSON;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     currency: Schema.Attribute.String;
     description: Schema.Attribute.Blocks;
-    frameMaterial: Schema.Attribute.Enumeration<
-      ['metal', 'plastic', 'acetate', 'titanium', 'mixed']
+    frameShape: Schema.Attribute.Enumeration<
+      [
+        '\u0430\u0432\u0456\u0430\u0442\u043E\u0440',
+        '\u0440\u043E\u043C\u0431\u0438',
+        '\u043D\u0430\u0432\u0456\u0433\u0430\u0442\u043E\u0440',
+        '\u043A\u0440\u0443\u0433\u043B\u0456',
+        '\u043F\u0440\u044F\u043C\u043E\u043A\u0443\u0442\u043D\u0438\u043A',
+        '\u043A\u0432\u0430\u0434\u0440\u0430\u0442',
+        '\u0442\u0440\u0430\u043F\u0435\u0446\u0456\u044F',
+        '\u0431\u0430\u0433\u0430\u0442\u043E\u043A\u0443\u0442\u043D\u0438\u043A',
+        '\u043E\u0432\u0435\u0440\u0441\u0430\u0439\u0437',
+        '\u043C\u0430\u0441\u043A\u0430',
+        '\u043A\u0456\u0448\u043A\u0430',
+      ]
+    >;
+    frameType: Schema.Attribute.Enumeration<
+      [
+        '\u043C\u0435\u0442\u0430\u043B',
+        '\u043F\u043B\u0430\u0441\u0442\u0438\u043A',
+        '\u0431\u0435\u0437\u043E\u043F\u0440\u0430\u0432\u043D\u0456',
+        '\u043A\u043E\u043C\u0431\u0456\u043D\u043E\u0432\u0430\u043D\u0430',
+      ]
     >;
     gender: Schema.Attribute.Enumeration<
       ['children', 'women', 'men', 'unisex']
     >;
+    hasClipon: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     images: Schema.Attribute.Media<'images', true>;
+    isBrand: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     isFeatured: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     isNew: Schema.Attribute.Boolean;
-    lensMaterial: Schema.Attribute.Enumeration<
-      ['mineral', 'glass', 'polycarbonate', 'nylon']
-    >;
     lensType: Schema.Attribute.Enumeration<
-      ['gradient', 'polarized', 'mirrored', 'photochromic', 'solid']
+      [
+        '\u043F\u043E\u043B\u044F\u0440\u0438\u0437\u043E\u0432\u0430\u043D\u0456',
+        '\u0441\u043E\u043D\u0446\u0435\u0437\u0430\u0445\u0438\u0441\u043D\u0456',
+        '\u0445\u0430\u043C\u0435\u043B\u0435\u043E\u043D',
+        "\u043A\u043E\u043C\u043F'\u044E\u0442\u0435\u0440",
+        '\u043D\u0435\u0439\u043B\u043E\u043D',
+      ]
     >;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
@@ -753,21 +777,7 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
       Schema.Attribute.DefaultTo<'active'>;
     publishedAt: Schema.Attribute.DateTime;
     salePrice: Schema.Attribute.Decimal;
-    shape: Schema.Attribute.Enumeration<
-      [
-        'square',
-        'aviator',
-        'round',
-        'cat-eye',
-        'rectangular',
-        'oval',
-        'mask',
-        'butterfly',
-        'rounded',
-        'panto',
-        'non-standard',
-      ]
-    >;
+    sizes: Schema.Attribute.String;
     slug: Schema.Attribute.UID<'title'> & Schema.Attribute.Required;
     stockQuantity: Schema.Attribute.Integer;
     supplierCode: Schema.Attribute.String;
@@ -775,7 +785,6 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    uvProtection: Schema.Attribute.String;
     variants: Schema.Attribute.Component<'product.product-variant', true>;
   };
 }
