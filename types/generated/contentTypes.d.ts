@@ -718,7 +718,6 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
     hasClipon: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     images: Schema.Attribute.Media<'images', true>;
     isBrand: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
-    isFeatured: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     isNew: Schema.Attribute.Boolean;
     lensType: Schema.Attribute.Enumeration<
       [
