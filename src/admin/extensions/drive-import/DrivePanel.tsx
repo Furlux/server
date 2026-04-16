@@ -36,7 +36,7 @@ const DrivePanel: React.FC<TProps> = ({ documentId, onDone }) => {
 
     for (const url of list) {
       try {
-        await client.post('/upload-from-drive', { url, productDocumentId: documentId });
+        await client.post('/api/upload-from-drive', { url, productDocumentId: documentId });
         success += 1;
       } catch (err: unknown) {
         const e = err as { response?: { data?: { error?: { message?: string } } }; message?: string };
