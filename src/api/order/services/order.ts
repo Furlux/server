@@ -108,7 +108,7 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
     await strapi.documents('api::order.order').update({
       documentId: order.documentId,
       data: {
-        status: newStatus as 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled',
+        orderStatus: newStatus as 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled',
         paymentStatus: (newPaymentStatus ?? 'pending') as 'pending' | 'paid' | 'failed',
       },
     });

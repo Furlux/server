@@ -17,8 +17,8 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       return ctx.notFound('Order not found');
     }
 
-    if (order.status !== 'pending') {
-      return ctx.badRequest(`Order status is "${order.status}", expected "pending"`);
+    if ((order as any).orderStatus !== 'pending') {
+      return ctx.badRequest(`Order status is "${(order as any).orderStatus}", expected "pending"`);
     }
 
     try {
