@@ -7,9 +7,7 @@ export default {
       config: {
         policies: [],
         middlewares: [],
-        auth: {
-          scope: ['admin'],
-        },
+        auth: false,
       },
     },
   ],
