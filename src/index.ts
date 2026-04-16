@@ -1,7 +1,7 @@
 import type { Core } from '@strapi/strapi';
 
 const ORDER_UID = 'api::order.order';
-const CM_KEY = `plugin_content_manager_configuration_content_types::${ORDER_UID}`;
+const CM_KEY = `configuration_content_types::${ORDER_UID}`;
 
 type TOrderItem = { productName?: string; quantity?: number; price?: number };
 
