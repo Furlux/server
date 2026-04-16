@@ -15,7 +15,7 @@
       "type": "biginteger",
       "required": true
     },
-    "orderStatus": {
+    "status": {
       "type": "enumeration",
       "enum": ["pending", "processing", "shipped", "delivered", "cancelled"],
       "default": "pending",
