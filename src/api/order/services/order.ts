@@ -108,9 +108,9 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
     await strapi.documents('api::order.order').update({
       documentId: order.documentId,
       data: {
-        status: newStatus as 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled',
+        orderStatus: newStatus,
         paymentStatus: (newPaymentStatus ?? 'pending') as 'pending' | 'paid' | 'failed',
-      },
+      } as any,
     });
 
     strapi.log.info(`Order ${order.documentId} status updated to "${newStatus}" via Mono webhook`);

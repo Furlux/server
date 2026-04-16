@@ -58,7 +58,7 @@ const configureOrderAdminView = async (strapi: Core.Strapi) => {
       id: { edit: {}, list: { label: 'ID', searchable: true, sortable: true } },
       label: ro('Замовлення'),
       itemsSummary: ro('Товари'),
-      status: rw('Статус'),
+      orderStatus: rw('Статус замовлення'),
       paymentStatus: rw('Статус оплати'),
       firstName: rw('Ім\'я'),
       lastName: rw('Прізвище'),
@@ -82,10 +82,10 @@ const configureOrderAdminView = async (strapi: Core.Strapi) => {
       documentId: { edit: {}, list: { label: 'documentId', searchable: true, sortable: true } },
     },
     layouts: {
-      list: ['label', 'status', 'paymentStatus', 'totalPrice', 'createdAt'],
+      list: ['label', 'orderStatus', 'paymentStatus', 'totalPrice', 'createdAt'],
       edit: [
         [{ name: 'label', size: 8 }, { name: 'totalPrice', size: 2 }, { name: 'currency', size: 2 }],
-        [{ name: 'status', size: 6 }, { name: 'paymentStatus', size: 6 }],
+        [{ name: 'orderStatus', size: 6 }, { name: 'paymentStatus', size: 6 }],
         [{ name: 'itemsSummary', size: 12 }],
         [{ name: 'firstName', size: 6 }, { name: 'lastName', size: 6 }],
         [{ name: 'phone', size: 6 }, { name: 'city', size: 6 }],
@@ -105,18 +105,6 @@ export default {
 
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
     await configureOrderAdminView(strapi);
-
-    // Revert: copy order_status back to status if migration moved data
-    try {
-      const knex = strapi.db.connection;
-      const hasNew = await knex.schema.hasColumn('orders', 'order_status');
-      if (hasNew) {
-        await knex('orders').whereNull('status').whereNotNull('order_status').update({ status: knex.ref('order_status') });
-        strapi.log.info('Reverted order_status → status for any migrated rows');
-      }
-    } catch (e) {
-      strapi.log.warn('status revert skipped:', (e as Error).message);
-    }
 
     const count = await backfillOrders(strapi);
     if (count > 0) {
