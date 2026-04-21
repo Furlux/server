@@ -3,6 +3,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import crypto from 'crypto';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const heicConvert = require('heic-convert');
 
 const DRIVE_ID_REGEX = /(?:\/file\/d\/|[?&]id=|\/d\/)([a-zA-Z0-9_-]{20,})/;
 
@@ -10,6 +12,20 @@ const DRIVE_ID_REGEX = /(?:\/file\/d\/|[?&]id=|\/d\/)([a-zA-Z0-9_-]{20,})/;
 const extractDriveFileId = (url: string): string | null => {
   const match = url.match(DRIVE_ID_REGEX);
   return match ? match[1] : null;
+};
+
+// inputs buffer, does check magic bytes for HEIC/HEIF format, returns boolean
+const isHeif = (buffer: Buffer): boolean => {
+  if (buffer.length < 12) return false;
+  if (buffer.toString('ascii', 4, 8) !== 'ftyp') return false;
+  const brand = buffer.toString('ascii', 8, 12);
+  return ['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1', 'heim', 'heis', 'hevm', 'hevs'].includes(brand);
+};
+
+// inputs HEIC buffer, does convert to JPEG, returns { buffer, mime, ext }
+const convertHeifToJpeg = async (input: Buffer): Promise<{ buffer: Buffer; mime: string; ext: string }> => {
+  const output = await heicConvert({ buffer: input, format: 'JPEG', quality: 0.9 });
+  return { buffer: Buffer.from(output), mime: 'image/jpeg', ext: '.jpg' };
 };
 
 // inputs file ID, does fetch binary from Drive public download endpoint, returns { buffer, contentType, filename }
@@ -37,14 +53,25 @@ const downloadDriveFile = async (fileId: string): Promise<{ buffer: Buffer; cont
 };
 
 export default ({ strapi }: { strapi: Core.Strapi }) => ({
-  // inputs { url, productDocumentId }, does download Drive file and attach to product images, returns { file, product }
+  // inputs { url, productDocumentId }, does download Drive file, convert HEIF if needed, attach to product, returns { file, product }
   async uploadAndAttach({ url, productDocumentId }: { url: string; productDocumentId: string }) {
     const fileId = extractDriveFileId(url);
     if (!fileId) {
       throw new Error('Невірний формат Google Drive URL');
     }
 
-    const { buffer, contentType, filename } = await downloadDriveFile(fileId);
+    let { buffer, contentType, filename } = await downloadDriveFile(fileId);
+
+    if (isHeif(buffer)) {
+      strapi.log.info(`[upload-from-drive] Converting HEIF → JPEG for ${filename}`);
+      const converted = await convertHeifToJpeg(buffer);
+      buffer = converted.buffer;
+      contentType = converted.mime;
+      filename = filename.replace(/\.(heic|heif)$/i, converted.ext);
+      if (!filename.toLowerCase().endsWith(converted.ext)) {
+        filename = `${filename}${converted.ext}`;
+      }
+    }
 
     const tmpPath = path.join(os.tmpdir(), `${crypto.randomUUID()}-${filename}`);
     fs.writeFileSync(tmpPath, buffer);
