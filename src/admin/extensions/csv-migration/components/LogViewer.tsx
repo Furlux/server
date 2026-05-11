@@ -21,11 +21,6 @@ const LogViewer: React.FC<TProps> = ({ logs, autoScroll = true, allowExpand = fa
 
   const height = expanded ? EXPANDED_HEIGHT : COMPACT_HEIGHT;
 
-  const copyAll = () => {
-    if (logs.length === 0) return;
-    void navigator.clipboard.writeText(logs.join('\n'));
-  };
-
   return (
     <div>
       <div style={{
@@ -38,38 +33,21 @@ const LogViewer: React.FC<TProps> = ({ logs, autoScroll = true, allowExpand = fa
       }}>
         <span>Усього рядків: <b>{logs.length}</b></span>
         {allowExpand ? (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              type="button"
-              onClick={copyAll}
-              style={{
-                padding: '4px 10px',
-                background: 'transparent',
-                border: '1px solid #dcdce4',
-                borderRadius: 4,
-                fontSize: 11,
-                cursor: 'pointer',
-                color: '#32324d',
-              }}
-            >
-              Копіювати все
-            </button>
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              style={{
-                padding: '4px 10px',
-                background: 'transparent',
-                border: '1px solid #dcdce4',
-                borderRadius: 4,
-                fontSize: 11,
-                cursor: 'pointer',
-                color: '#32324d',
-              }}
-            >
-              {expanded ? 'Згорнути' : 'Розгорнути'}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            style={{
+              padding: '4px 10px',
+              background: 'transparent',
+              border: '1px solid #dcdce4',
+              borderRadius: 4,
+              fontSize: 11,
+              cursor: 'pointer',
+              color: '#32324d',
+            }}
+          >
+            {expanded ? 'Згорнути' : 'Розгорнути'}
+          </button>
         ) : null}
       </div>
       <div
