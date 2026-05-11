@@ -1,6 +1,6 @@
 import type { TJobState, TFailedItem, TPhotoFailedItem } from './job-state';
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_FAILURE_SAMPLES = 15;
@@ -10,6 +10,7 @@ type TGeminiRequest = {
   generationConfig?: {
     temperature?: number;
     maxOutputTokens?: number;
+    thinkingConfig?: { thinkingBudget: number };
   };
 };
 
@@ -122,7 +123,8 @@ export const generateSummary = async (job: TJobState): Promise<string> => {
     contents: [{ parts: [{ text: buildPrompt(job) }] }],
     generationConfig: {
       temperature: 0.4,
-      maxOutputTokens: 500,
+      maxOutputTokens: 800,
+      thinkingConfig: { thinkingBudget: 0 },
     },
   };
 
