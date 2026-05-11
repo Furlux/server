@@ -1,5 +1,6 @@
 import React from 'react';
 import type { TMigrationOptions, TMode } from '../types';
+import ModeHelp from './ModeHelp';
 
 type TProps = {
   readonly value: TMigrationOptions;
@@ -54,6 +55,8 @@ const RunOptions: React.FC<TProps> = ({ value, disabled, onChange }) => {
         Фото з Google Drive (колонка "Для Михаила") додаються <b>тільки для нових продуктів</b>.
         В існуючих продуктах фото ніколи не перезаписуються.
       </p>
+
+      <ModeHelp />
 
       <label style={labelStyle}>
         <input
