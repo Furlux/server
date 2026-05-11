@@ -1,4 +1,5 @@
 import type { Core } from '@strapi/strapi';
+import { gunzipSync } from 'zlib';
 import {
   buildProductPayload,
   groupByArticle,
@@ -13,6 +14,19 @@ import {
   type TJobState,
   type TMigrationOptions,
 } from '../lib/job-state';
+
+// inputs buffer, does check first two bytes for gzip magic 0x1f 0x8b, returns boolean
+const isGzipBuffer = (buf: Buffer): boolean =>
+  buf.length >= 2 && buf[0] === 0x1f && buf[1] === 0x8b;
+
+// inputs base64 string, does decode + optionally gunzip if magic bytes match, returns UTF-8 text
+const decodePayload = (csvBase64: string): string => {
+  const buf = Buffer.from(csvBase64, 'base64');
+  if (isGzipBuffer(buf)) {
+    return gunzipSync(buf).toString('utf-8');
+  }
+  return buf.toString('utf-8');
+};
 
 const RATE_LIMIT_MS = 150;
 const PROGRESS_LOG_TAG = '[csv-migration]';
@@ -166,7 +180,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     csvBase64: string;
     options: TMigrationOptions;
   }): Promise<{ jobId: string; total: number }> {
-    const csvText = Buffer.from(csvBase64, 'base64').toString('utf-8');
+    const csvText = decodePayload(csvBase64);
     const { rows } = parseAndValidate(csvText);
     const groups = groupByArticle(rows);
 

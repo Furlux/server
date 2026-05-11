@@ -14,13 +14,14 @@ type TStartResponse = {
 };
 
 export type TUploadProgress = {
-  readonly stage: 'reading' | 'encoding' | 'sending' | 'parsing';
+  readonly stage: 'reading' | 'compressing' | 'encoding' | 'sending' | 'parsing';
   readonly fileName: string;
   readonly fileSize: number;
+  readonly compressedSize?: number;
 };
 
-// inputs File, does read file as text and base64 encode, returns Promise<string>
-const fileToBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
+// inputs Blob, does base64 encode via FileReader, returns Promise<string>
+const blobToBase64 = (blob: Blob): Promise<string> => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => {
     const result = reader.result;
@@ -32,8 +33,17 @@ const fileToBase64 = (file: File): Promise<string> => new Promise((resolve, reje
     resolve(commaIdx >= 0 ? result.substring(commaIdx + 1) : result);
   };
   reader.onerror = () => reject(reader.error ?? new Error('FileReader error'));
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(blob);
 });
+
+// inputs File, does gzip-compress via CompressionStream, returns Promise<Blob>
+const gzipFile = async (file: File): Promise<Blob> => {
+  if (typeof (globalThis as { CompressionStream?: unknown }).CompressionStream === 'undefined') {
+    throw new Error('Браузер не підтримує CompressionStream — оновіть Chrome/Firefox/Safari');
+  }
+  const stream = file.stream().pipeThrough(new CompressionStream('gzip'));
+  return new Response(stream).blob();
+};
 
 // inputs ms, does sleep then reject with timeout error, returns Promise<never>
 const timeoutPromise = (ms: number): Promise<never> =>
@@ -105,12 +115,17 @@ export const useMigrationJob = (): TMigrationJobApi => {
     setUpload({ stage: 'reading', fileName: file.name, fileSize: file.size });
 
     try {
-      setUpload({ stage: 'encoding', fileName: file.name, fileSize: file.size });
-      const csvBase64 = await fileToBase64(file);
+      setUpload({ stage: 'compressing', fileName: file.name, fileSize: file.size });
+      const gzipBlob = await gzipFile(file);
+      const compressedSize = gzipBlob.size;
 
-      setUpload({ stage: 'sending', fileName: file.name, fileSize: file.size });
+      setUpload({ stage: 'encoding', fileName: file.name, fileSize: file.size, compressedSize });
+      const csvBase64 = await blobToBase64(gzipBlob);
+
+      setUpload({ stage: 'sending', fileName: file.name, fileSize: file.size, compressedSize });
       const postPromise = client.post<TStartResponse>('/api/csv-migration/start', {
         csvBase64,
+        compressed: true,
         options,
       });
       const { data } = (await Promise.race([postPromise, timeoutPromise(UPLOAD_TIMEOUT_MS)])) as { data: TStartResponse };

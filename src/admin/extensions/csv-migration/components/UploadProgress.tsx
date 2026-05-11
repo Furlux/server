@@ -5,6 +5,7 @@ type TProps = { readonly progress: TUploadProgress };
 
 const STAGE_LABEL: Record<TUploadProgress['stage'], string> = {
   reading: 'Читаємо файл...',
+  compressing: 'Стискаємо CSV (gzip)...',
   encoding: 'Кодуємо в base64...',
   sending: 'Відправляємо на сервер...',
   parsing: 'Сервер парсить CSV...',
@@ -21,12 +22,20 @@ const indeterminateKeyframes = `
 // inputs progress object, does render file info + animated indeterminate bar + stage label, returns JSX
 const UploadProgress: React.FC<TProps> = ({ progress }) => {
   const sizeKb = (progress.fileSize / 1024).toFixed(1);
+  const compressedKb = progress.compressedSize ? (progress.compressedSize / 1024).toFixed(1) : null;
+  const ratio = progress.compressedSize ? (progress.fileSize / progress.compressedSize).toFixed(1) : null;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <style>{indeterminateKeyframes}</style>
       <div style={{ fontSize: 13, color: '#32324d', fontWeight: 600 }}>
         {progress.fileName} <span style={{ color: '#666', fontWeight: 400 }}>({sizeKb} КБ)</span>
       </div>
+      {compressedKb ? (
+        <p style={{ margin: 0, fontSize: 12, color: '#2f8132' }}>
+          Після стиснення: <b>{compressedKb} КБ</b> (×{ratio} менше)
+        </p>
+      ) : null}
       <div style={{
         position: 'relative',
         width: '100%',
@@ -46,9 +55,6 @@ const UploadProgress: React.FC<TProps> = ({ progress }) => {
       </div>
       <p style={{ margin: 0, fontSize: 12, color: '#666' }}>
         {STAGE_LABEL[progress.stage]}
-        {progress.stage === 'sending' && progress.fileSize > 1024 * 1024
-          ? ` (для файлу >1 МБ це може зайняти 10–30с)`
-          : ''}
       </p>
     </div>
   );
