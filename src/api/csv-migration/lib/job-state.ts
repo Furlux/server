@@ -31,6 +31,18 @@ export type TPhotoFailedContext = {
   readonly stage?: 'download' | 'convert' | 'upload' | 'attach' | 'unknown';
 };
 
+export type TTimingBucket = {
+  count: number;
+  totalMs: number;
+};
+
+export type TJobTimings = {
+  lookup: TTimingBucket;
+  create: TTimingBucket;
+  update: TTimingBucket;
+  photo: TTimingBucket;
+};
+
 export type TJobStatus = 'pending' | 'running' | 'completed' | 'failed';
 
 export type TJobState = {
@@ -45,6 +57,7 @@ export type TJobState = {
   failed: TFailedItem[];
   photoFailed: TPhotoFailedItem[];
   logs: string[];
+  timings: TJobTimings;
   fatalError?: string;
   startedAt: number;
   finishedAt?: number;
@@ -55,6 +68,14 @@ const STALE_AFTER_MS = 60 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 30 * 60 * 1000;
 
 const store = new Map<string, TJobState>();
+
+// inputs nothing, does build empty timings buckets, returns timings object
+const emptyTimings = (): TJobTimings => ({
+  lookup: { count: 0, totalMs: 0 },
+  create: { count: 0, totalMs: 0 },
+  update: { count: 0, totalMs: 0 },
+  photo: { count: 0, totalMs: 0 },
+});
 
 // inputs jobId + options, does create new pending job, returns job state
 export const createJob = (jobId: string, options: TMigrationOptions): TJobState => {
@@ -70,6 +91,7 @@ export const createJob = (jobId: string, options: TMigrationOptions): TJobState 
     failed: [],
     photoFailed: [],
     logs: [],
+    timings: emptyTimings(),
     startedAt: Date.now(),
   };
   store.set(jobId, job);

@@ -35,6 +35,18 @@ export type TPhotoFailedItem = {
 
 export type TJobStatus = 'pending' | 'running' | 'completed' | 'failed';
 
+export type TTimingBucket = {
+  readonly count: number;
+  readonly totalMs: number;
+};
+
+export type TJobTimings = {
+  readonly lookup: TTimingBucket;
+  readonly create: TTimingBucket;
+  readonly update: TTimingBucket;
+  readonly photo: TTimingBucket;
+};
+
 export type TJobState = {
   readonly jobId: string;
   readonly status: TJobStatus;
@@ -47,6 +59,7 @@ export type TJobState = {
   readonly failed: readonly TFailedItem[];
   readonly photoFailed: readonly TPhotoFailedItem[];
   readonly logs: readonly string[];
+  readonly timings?: TJobTimings;
   readonly fatalError?: string;
   readonly startedAt: number;
   readonly finishedAt?: number;

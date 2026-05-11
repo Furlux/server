@@ -28,11 +28,22 @@ const decodePayload = (csvBase64: string): string => {
   return buf.toString('utf-8');
 };
 
-const RATE_LIMIT_MS = 150;
+const RATE_LIMIT_MS = 0;
 const PROGRESS_LOG_TAG = '[csv-migration]';
 
 // inputs nothing, does sleep for given ms, returns Promise
 const sleep = (ms: number): Promise<void> => new Promise((res) => setTimeout(res, ms));
+
+// inputs bucket, does format average ms per call, returns string
+const fmtAvg = (b: { count: number; totalMs: number }): string =>
+  b.count === 0 ? 'n/a' : `${(b.totalMs / b.count).toFixed(0)}мс`;
+
+// inputs total ms, does format as Xs or Xмхв Yс, returns string
+const fmtTotal = (totalMs: number): string => {
+  const s = totalMs / 1000;
+  if (s < 60) return `${s.toFixed(1)}с`;
+  return `${Math.floor(s / 60)}хв ${Math.round(s % 60)}с`;
+};
 
 // inputs strapi instance, does fetch all categories and map slug → documentId, returns map
 const resolveCategoriesBySlug = async (strapi: Core.Strapi): Promise<TCategoriesMap> => {
@@ -78,7 +89,7 @@ const detectPhotoStage = (raw: string): 'download' | 'convert' | 'upload' | 'att
   return 'unknown';
 };
 
-// inputs strapi + jobId + row[0] + productDocId, does call upload-from-drive service, returns void
+// inputs strapi + jobId + row[0] + productDocId, does call upload-from-drive service with timing, returns void
 const uploadPhotoForProduct = async (
   strapi: Core.Strapi,
   job: TJobState,
@@ -88,10 +99,15 @@ const uploadPhotoForProduct = async (
 ): Promise<void> => {
   const driveUrl = (row['Для Михаила'] || '').trim();
   if (!driveUrl) return;
+  const t0 = performance.now();
   try {
     const uploadService = strapi.service('api::upload-from-drive.upload-from-drive');
     await uploadService.uploadAndAttach({ url: driveUrl, productDocumentId });
+    job.timings.photo.count += 1;
+    job.timings.photo.totalMs += performance.now() - t0;
   } catch (e: unknown) {
+    job.timings.photo.count += 1;
+    job.timings.photo.totalMs += performance.now() - t0;
     const err = e as Error;
     const message = err?.message ?? String(e);
     job.photoFailed.push({
@@ -144,7 +160,10 @@ const runMigration = async (
       try {
         const payload = buildProductPayload(articleRows, categories);
         payloadSnapshot = { slug: payload.slug, title: payload.title };
+        const tLookup = performance.now();
         const existing = await findExistingProduct(strapi, article, payload.slug);
+        job.timings.lookup.count += 1;
+        job.timings.lookup.totalMs += performance.now() - tLookup;
 
         if (existing && options.mode === 'skip') {
           job.skipped += 1;
@@ -161,17 +180,23 @@ const runMigration = async (
 
         if (existing && options.mode === 'update') {
           attemptedOperation = 'UPDATE';
+          const tUpdate = performance.now();
           await strapi.documents('api::product.product').update({
             documentId: existing.documentId,
             data: payload as never,
           });
+          job.timings.update.count += 1;
+          job.timings.update.totalMs += performance.now() - tUpdate;
           job.updated += 1;
           pushLog(job, `${prefix}: UPDATED (photos untouched)`);
         } else {
           attemptedOperation = 'CREATE';
+          const tCreate = performance.now();
           const created = (await strapi.documents('api::product.product').create({
             data: payload as never,
           })) as { documentId: string };
+          job.timings.create.count += 1;
+          job.timings.create.totalMs += performance.now() - tCreate;
           job.created += 1;
           pushLog(job, `${prefix}: CREATED`);
           await uploadPhotoForProduct(strapi, job, firstRow, article, created.documentId);
@@ -202,7 +227,14 @@ const runMigration = async (
 
     job.status = 'completed';
     job.finishedAt = Date.now();
+    const wallClockMs = job.finishedAt - job.startedAt;
     pushLog(job, `=== DONE === created=${job.created} updated=${job.updated} skipped=${job.skipped} failed=${job.failed.length} photoFailed=${job.photoFailed.length}`);
+    pushLog(job, `=== TIMINGS ===`);
+    pushLog(job, `Wall clock: ${fmtTotal(wallClockMs)}`);
+    pushLog(job, `Lookup: avg ${fmtAvg(job.timings.lookup)} × ${job.timings.lookup.count} = ${fmtTotal(job.timings.lookup.totalMs)}`);
+    pushLog(job, `Create: avg ${fmtAvg(job.timings.create)} × ${job.timings.create.count} = ${fmtTotal(job.timings.create.totalMs)}`);
+    pushLog(job, `Update: avg ${fmtAvg(job.timings.update)} × ${job.timings.update.count} = ${fmtTotal(job.timings.update.totalMs)}`);
+    pushLog(job, `Photo:  avg ${fmtAvg(job.timings.photo)} × ${job.timings.photo.count} = ${fmtTotal(job.timings.photo.totalMs)}`);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     job.status = 'failed';
