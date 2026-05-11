@@ -4,6 +4,7 @@ import RunOptions from './components/RunOptions';
 import ProgressPanel from './components/ProgressPanel';
 import LogViewer from './components/LogViewer';
 import ReportPanel from './components/ReportPanel';
+import UploadProgress from './components/UploadProgress';
 import { useMigrationJob } from './hooks/useMigrationJob';
 import type { TMigrationOptions } from './types';
 
@@ -44,7 +45,7 @@ const CsvMigrationPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [options, setOptions] = useState<TMigrationOptions>(DEFAULT_OPTIONS);
   const { state, start, reset } = useMigrationJob();
-  const { phase, job, error } = state;
+  const { phase, job, error, upload } = state;
 
   const isWorking = phase === 'uploading' || phase === 'running';
   const isLocked = isWorking || phase === 'done';
@@ -105,9 +106,10 @@ const CsvMigrationPage: React.FC = () => {
         </div>
       ) : null}
 
-      {phase === 'uploading' ? (
+      {phase === 'uploading' && upload ? (
         <div style={sectionStyle}>
-          <p style={{ margin: 0, fontSize: 13, color: '#32324d' }}>Завантаження файлу...</p>
+          <p style={headerStyle}>Завантаження</p>
+          <UploadProgress progress={upload} />
         </div>
       ) : null}
 
