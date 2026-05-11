@@ -33,7 +33,7 @@ export type TJobState = {
   finishedAt?: number;
 };
 
-const MAX_LOGS = 500;
+const MAX_LOGS = 20000;
 const STALE_AFTER_MS = 60 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 30 * 60 * 1000;
 

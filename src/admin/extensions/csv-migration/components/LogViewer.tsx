@@ -1,45 +1,104 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 type TProps = {
   readonly logs: readonly string[];
   readonly autoScroll?: boolean;
+  readonly allowExpand?: boolean;
 };
 
-// inputs logs array, does render scrollable monospace box, returns JSX
-const LogViewer: React.FC<TProps> = ({ logs, autoScroll = true }) => {
+const COMPACT_HEIGHT = 240;
+const EXPANDED_HEIGHT = 600;
+
+// inputs logs array + autoScroll/allowExpand flags, does render scrollable log box + toggle, returns JSX
+const LogViewer: React.FC<TProps> = ({ logs, autoScroll = true, allowExpand = false }) => {
   const boxRef = useRef<HTMLDivElement | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (!autoScroll || !boxRef.current) return;
     boxRef.current.scrollTop = boxRef.current.scrollHeight;
   }, [logs, autoScroll]);
 
+  const height = expanded ? EXPANDED_HEIGHT : COMPACT_HEIGHT;
+
+  const copyAll = () => {
+    if (logs.length === 0) return;
+    void navigator.clipboard.writeText(logs.join('\n'));
+  };
+
   return (
-    <div
-      ref={boxRef}
-      style={{
-        height: 240,
-        overflowY: 'auto',
-        background: '#1e1e2d',
-        color: '#e6e6f0',
-        padding: 12,
-        borderRadius: 6,
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    <div>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
         fontSize: 12,
-        lineHeight: 1.5,
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-      }}
-    >
-      {logs.length === 0 ? (
-        <p style={{ margin: 0, color: '#8e8ea9' }}>Очікування...</p>
-      ) : (
-        logs.map((line, i) => (
-          <div key={i} style={{ color: lineColor(line) }}>
-            {line}
+        color: '#666',
+      }}>
+        <span>Усього рядків: <b>{logs.length}</b></span>
+        {allowExpand ? (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              onClick={copyAll}
+              style={{
+                padding: '4px 10px',
+                background: 'transparent',
+                border: '1px solid #dcdce4',
+                borderRadius: 4,
+                fontSize: 11,
+                cursor: 'pointer',
+                color: '#32324d',
+              }}
+            >
+              Копіювати все
+            </button>
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              style={{
+                padding: '4px 10px',
+                background: 'transparent',
+                border: '1px solid #dcdce4',
+                borderRadius: 4,
+                fontSize: 11,
+                cursor: 'pointer',
+                color: '#32324d',
+              }}
+            >
+              {expanded ? 'Згорнути' : 'Розгорнути'}
+            </button>
           </div>
-        ))
-      )}
+        ) : null}
+      </div>
+      <div
+        ref={boxRef}
+        style={{
+          height,
+          overflowY: 'auto',
+          background: '#1e1e2d',
+          color: '#e6e6f0',
+          padding: 12,
+          borderRadius: 6,
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+          fontSize: 12,
+          lineHeight: 1.5,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          transition: 'height 0.2s ease',
+        }}
+      >
+        {logs.length === 0 ? (
+          <p style={{ margin: 0, color: '#8e8ea9' }}>Очікування...</p>
+        ) : (
+          logs.map((line, i) => (
+            <div key={i} style={{ color: lineColor(line) }}>
+              {line}
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 };

@@ -119,8 +119,14 @@ const CsvMigrationPage: React.FC = () => {
             <ProgressPanel job={job} />
           </div>
           <div style={sectionStyle}>
-            <p style={headerStyle}>Лог</p>
-            <LogViewer logs={job.logs} autoScroll={phase === 'running'} />
+            <p style={headerStyle}>
+              Лог {phase === 'done' ? '(міграція завершена)' : '(оновлюється кожну секунду)'}
+            </p>
+            <LogViewer
+              logs={job.logs}
+              autoScroll={phase === 'running'}
+              allowExpand={phase === 'done'}
+            />
           </div>
         </>
       ) : null}
