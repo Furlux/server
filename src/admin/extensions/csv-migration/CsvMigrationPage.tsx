@@ -46,7 +46,7 @@ const CsvMigrationPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [options, setOptions] = useState<TMigrationOptions>(DEFAULT_OPTIONS);
   const { state, start, reset } = useMigrationJob();
-  const { phase, job, error, upload } = state;
+  const { phase, job, error, upload, isResuming } = state;
 
   const isWorking = phase === 'uploading' || phase === 'running';
   const isLocked = isWorking || phase === 'done';
@@ -70,6 +70,20 @@ const CsvMigrationPage: React.FC = () => {
           Завантажте CSV з товарами — система розгрупує по артикулу та створить продукти у Strapi.
         </p>
       </div>
+
+      {isResuming ? (
+        <div style={{
+          padding: '10px 14px',
+          background: '#f0f0ff',
+          border: '1px solid #c8c6ff',
+          borderLeft: '4px solid #4945ff',
+          borderRadius: 6,
+          fontSize: 13,
+          color: '#32324d',
+        }}>
+          Відновлюємо стан попередньої міграції з URL...
+        </div>
+      ) : null}
 
       <div style={sectionStyle}>
         <p style={headerStyle}>1. CSV-файл</p>

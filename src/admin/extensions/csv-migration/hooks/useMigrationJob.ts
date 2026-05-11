@@ -4,6 +4,7 @@ import type { TJobState, TMigrationOptions, TUiPhase } from '../types';
 
 const POLL_INTERVAL_MS = 10 * 1000;
 const UPLOAD_TIMEOUT_MS = 5 * 60 * 1000;
+const JOB_ID_PARAM = 'jobId';
 
 type TFetchClient = ReturnType<typeof getFetchClient>;
 
@@ -18,6 +19,24 @@ export type TUploadProgress = {
   readonly fileName: string;
   readonly fileSize: number;
   readonly compressedSize?: number;
+};
+
+// inputs nothing, does read jobId from current URL query, returns string or null
+const getJobIdFromUrl = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return new URLSearchParams(window.location.search).get(JOB_ID_PARAM);
+};
+
+// inputs jobId or null, does write/remove jobId in URL via replaceState, returns void
+const setJobIdInUrl = (jobId: string | null): void => {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (jobId) {
+    url.searchParams.set(JOB_ID_PARAM, jobId);
+  } else {
+    url.searchParams.delete(JOB_ID_PARAM);
+  }
+  window.history.replaceState(null, '', url.toString());
 };
 
 // inputs Blob, does base64 encode via FileReader, returns Promise<string>
@@ -54,6 +73,7 @@ export type TMigrationJobState = {
   readonly job: TJobState | null;
   readonly error: string | null;
   readonly upload: TUploadProgress | null;
+  readonly isResuming: boolean;
 };
 
 export type TMigrationJobApi = {
@@ -62,12 +82,13 @@ export type TMigrationJobApi = {
   readonly reset: () => void;
 };
 
-// inputs nothing, does manage CSV migration lifecycle with polling, returns api
+// inputs nothing, does manage CSV migration lifecycle with polling + URL persistence, returns api
 export const useMigrationJob = (): TMigrationJobApi => {
   const [phase, setPhase] = useState<TUiPhase>('idle');
   const [job, setJob] = useState<TJobState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [upload, setUpload] = useState<TUploadProgress | null>(null);
+  const [isResuming, setIsResuming] = useState(false);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const clientRef = useRef<TFetchClient | null>(null);
 
@@ -88,6 +109,7 @@ export const useMigrationJob = (): TMigrationJobApi => {
     try {
       const { data } = await client.get<TJobState>(`/api/csv-migration/status/${jobId}`);
       setJob(data);
+      setIsResuming(false);
       if (data.status === 'completed' || data.status === 'failed') {
         stopPolling();
         setPhase('done');
@@ -96,11 +118,21 @@ export const useMigrationJob = (): TMigrationJobApi => {
       const err = e as { response?: { status?: number } };
       if (err.response?.status === 404) {
         stopPolling();
-        setError('Джоб не знайдено — мабуть, сервер перезавантажився. Запустіть міграцію знову.');
+        setError('Цю міграцію вже не знайти на сервері (минув час зберігання або сервер перезавантажився). Запустіть нову.');
         setPhase('error');
+        setIsResuming(false);
+        setJobIdInUrl(null);
       }
     }
   }, [stopPolling]);
+
+  const beginPolling = useCallback((jobId: string): void => {
+    if (pollTimer.current) clearInterval(pollTimer.current);
+    void fetchStatus(jobId);
+    pollTimer.current = setInterval(() => {
+      void fetchStatus(jobId);
+    }, POLL_INTERVAL_MS);
+  }, [fetchStatus]);
 
   const start = useCallback(async (file: File, options: TMigrationOptions): Promise<void> => {
     const client = clientRef.current;
@@ -131,12 +163,10 @@ export const useMigrationJob = (): TMigrationJobApi => {
       const { data } = (await Promise.race([postPromise, timeoutPromise(UPLOAD_TIMEOUT_MS)])) as { data: TStartResponse };
 
       const jobId = data.jobId;
+      setJobIdInUrl(jobId);
       setUpload(null);
       setPhase('running');
-      await fetchStatus(jobId);
-      pollTimer.current = setInterval(() => {
-        void fetchStatus(jobId);
-      }, POLL_INTERVAL_MS);
+      beginPolling(jobId);
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: { message?: string } }; status?: number }; message?: string };
       const isPayloadTooLarge = err.response?.status === 413 || /payload too large|request entity too large/i.test(err.message ?? '');
@@ -147,17 +177,30 @@ export const useMigrationJob = (): TMigrationJobApi => {
       setError(message);
       setPhase('error');
     }
-  }, [fetchStatus]);
+  }, [beginPolling]);
 
   const reset = useCallback(() => {
     stopPolling();
     setJob(null);
     setError(null);
     setUpload(null);
+    setIsResuming(false);
     setPhase('idle');
+    setJobIdInUrl(null);
   }, [stopPolling]);
+
+  // On mount: if URL has a jobId param, resume polling for that job
+  useEffect(() => {
+    const existing = getJobIdFromUrl();
+    if (!existing) return;
+    setPhase('running');
+    setIsResuming(true);
+    beginPolling(existing);
+    return () => stopPolling();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => () => stopPolling(), [stopPolling]);
 
-  return { state: { phase, job, error, upload }, start, reset };
+  return { state: { phase, job, error, upload, isResuming }, start, reset };
 };
