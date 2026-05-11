@@ -50,16 +50,23 @@ const resolveCategoriesBySlug = async (strapi: Core.Strapi): Promise<TCategories
   return map;
 };
 
-// inputs strapi + article, does find existing product by articleNumber, returns product or null
-const findByArticleNumber = async (
+// inputs strapi + article + computed slug, does find existing product by articleNumber then by slug, returns product or null
+const findExistingProduct = async (
   strapi: Core.Strapi,
   article: string,
+  slug: string,
 ): Promise<{ documentId: string } | null> => {
-  const found = (await strapi.documents('api::product.product').findFirst({
+  const byArticle = (await strapi.documents('api::product.product').findFirst({
     filters: { articleNumber: { $eq: article } },
-    fields: ['articleNumber'],
+    fields: ['articleNumber', 'slug'],
   })) as { documentId: string } | null;
-  return found;
+  if (byArticle) return byArticle;
+
+  const bySlug = (await strapi.documents('api::product.product').findFirst({
+    filters: { slug: { $eq: slug } },
+    fields: ['articleNumber', 'slug'],
+  })) as { documentId: string } | null;
+  return bySlug;
 };
 
 // inputs strapi + jobId + row[0] + productDocId, does call upload-from-drive service, returns void
@@ -113,7 +120,8 @@ const runMigration = async (
       const prefix = `[${i}/${job.total}] ${article}`;
 
       try {
-        const existing = await findByArticleNumber(strapi, article);
+        const payload = buildProductPayload(articleRows, categories);
+        const existing = await findExistingProduct(strapi, article, payload.slug);
 
         if (existing && options.mode === 'skip') {
           job.skipped += 1;
@@ -121,8 +129,6 @@ const runMigration = async (
           job.processed = i;
           continue;
         }
-
-        const payload = buildProductPayload(articleRows, categories);
 
         if (options.dryRun) {
           pushLog(job, `${prefix}: DRY-RUN ${payload.title}`);

@@ -28,6 +28,12 @@ const convertHeifToJpeg = async (input: Buffer): Promise<{ buffer: Buffer; mime:
   return { buffer: Buffer.from(output), mime: 'image/jpeg', ext: '.jpg' };
 };
 
+// inputs filename string, does strip path separators and trim, returns safe filename
+const sanitizeFilename = (name: string): string => {
+  const cleaned = name.replace(/[\/\\:]+/g, '_').replace(/\s+/g, ' ').trim();
+  return cleaned || 'drive-file';
+};
+
 // inputs file ID, does fetch binary from Drive public download endpoint, returns { buffer, contentType, filename }
 const downloadDriveFile = async (fileId: string): Promise<{ buffer: Buffer; contentType: string; filename: string }> => {
   const downloadUrl = `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0`;
@@ -47,7 +53,8 @@ const downloadDriveFile = async (fileId: string): Promise<{ buffer: Buffer; cont
 
   const disposition = response.headers.get('content-disposition') ?? '';
   const filenameMatch = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
-  const filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : `drive-${fileId}.jpg`;
+  const rawFilename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : `drive-${fileId}.jpg`;
+  const filename = sanitizeFilename(rawFilename);
 
   return { buffer, contentType, filename };
 };
