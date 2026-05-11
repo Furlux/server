@@ -84,6 +84,7 @@ const LogViewer: React.FC<TProps> = ({ logs, autoScroll = true, allowExpand = fa
 // inputs log line, does pick color based on tag, returns hex string
 const lineColor = (line: string): string => {
   if (line.includes('FAIL') || line.includes('FATAL')) return '#ff7a7a';
+  if (line.includes('UNCHANGED')) return '#8e8ea9';
   if (line.includes('SKIP')) return '#b0b0c4';
   if (line.includes('UPDATED')) return '#7ac8ff';
   if (line.includes('CREATED')) return '#7aff7a';

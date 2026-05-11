@@ -45,6 +45,7 @@ const ReportPanel: React.FC<TProps> = ({ job, onReset }) => {
       <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#32324d' }}>
         <li>Створено: <b>{job.created}</b></li>
         <li>Оновлено: <b>{job.updated}</b></li>
+        <li>Без змін (дані вже актуальні): <b>{job.unchanged}</b></li>
         <li>Пропущено: <b>{job.skipped}</b></li>
         <li>Помилок створення: <b>{job.failed.length}</b></li>
         <li>Помилок фото: <b>{job.photoFailed.length}</b></li>

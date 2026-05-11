@@ -57,6 +57,7 @@ export type TJobState = {
   readonly processed: number;
   readonly created: number;
   readonly updated: number;
+  readonly unchanged: number;
   readonly skipped: number;
   readonly failed: readonly TFailedItem[];
   readonly photoFailed: readonly TPhotoFailedItem[];

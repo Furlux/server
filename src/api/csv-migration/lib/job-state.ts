@@ -55,6 +55,7 @@ export type TJobState = {
   processed: number;
   created: number;
   updated: number;
+  unchanged: number;
   skipped: number;
   failed: TFailedItem[];
   photoFailed: TPhotoFailedItem[];
@@ -92,6 +93,7 @@ export const createJob = (jobId: string, options: TMigrationOptions): TJobState 
     processed: 0,
     created: 0,
     updated: 0,
+    unchanged: 0,
     skipped: 0,
     failed: [],
     photoFailed: [],

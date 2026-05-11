@@ -87,6 +87,7 @@ const buildPrompt = (job: TJobState): string => {
 Загалом артикулів у CSV: ${job.total}
 Створено: ${job.created}
 Оновлено: ${job.updated}
+Без змін (дані ідентичні існуючим): ${job.unchanged}
 Пропущено: ${job.skipped}
 Помилок: ${job.failed.length}
 Помилок завантаження фото: ${job.photoFailed.length}

@@ -131,6 +131,7 @@ const ProgressPanel: React.FC<TProps> = ({ job }) => {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
         <CounterChip label="Created" value={job.created} color="#2f8132" />
         <CounterChip label="Updated" value={job.updated} color="#0c75af" />
+        <CounterChip label="Unchanged" value={job.unchanged} color="#6c7280" />
         <CounterChip label="Skipped" value={job.skipped} color="#8e8ea9" />
         <CounterChip label="Failed" value={job.failed.length} color="#d02b20" />
         <CounterChip label="Photo fail" value={job.photoFailed.length} color="#b86e00" />

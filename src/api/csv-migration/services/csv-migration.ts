@@ -62,23 +62,105 @@ const resolveCategoriesBySlug = async (strapi: Core.Strapi): Promise<TCategories
   return map;
 };
 
-// inputs strapi + article + computed slug, does find existing product by articleNumber then by slug, returns product or null
+type TExistingProduct = {
+  documentId: string;
+  [key: string]: unknown;
+};
+
+const COMPARE_FIELDS = [
+  'title', 'slug', 'articleNumber', 'supplierCode', 'price', 'currency',
+  'stockQuantity', 'available', 'isNew', 'isBrand', 'hasClipon',
+  'productStatus', 'photoFormat', 'gender', 'frameType', 'frameShape', 'lensType',
+] as const;
+
+// inputs strapi + article + computed slug + withFullData flag, does find existing product, returns product or null
 const findExistingProduct = async (
   strapi: Core.Strapi,
   article: string,
   slug: string,
-): Promise<{ documentId: string } | null> => {
+  withFullData: boolean,
+): Promise<TExistingProduct | null> => {
+  const fields = (withFullData ? [...COMPARE_FIELDS] : ['articleNumber', 'slug']) as never;
+  const populate = (withFullData ? { category: { fields: ['documentId'] }, variants: true } : undefined) as never;
+
   const byArticle = (await strapi.documents('api::product.product').findFirst({
     filters: { articleNumber: { $eq: article } },
-    fields: ['articleNumber', 'slug'],
-  })) as { documentId: string } | null;
+    fields,
+    populate,
+  })) as TExistingProduct | null;
   if (byArticle) return byArticle;
 
   const bySlug = (await strapi.documents('api::product.product').findFirst({
     filters: { slug: { $eq: slug } },
-    fields: ['articleNumber', 'slug'],
-  })) as { documentId: string } | null;
+    fields,
+    populate,
+  })) as TExistingProduct | null;
   return bySlug;
+};
+
+// inputs existing variants array + payload variants, does compare ignoring DB ids and order, returns boolean
+const variantsMatch = (
+  existing: unknown,
+  payload: ReadonlyArray<{ code: string; label: string; stockQuantity?: number }> | undefined,
+): boolean => {
+  const a = Array.isArray(existing)
+    ? existing.map((v: { code?: string; label?: string; stockQuantity?: number | null }) => ({
+        code: v.code ?? '',
+        label: v.label ?? '',
+        stockQuantity: v.stockQuantity ?? 0,
+      }))
+    : [];
+  const b = (payload ?? []).map((v) => ({
+    code: v.code,
+    label: v.label,
+    stockQuantity: v.stockQuantity ?? 0,
+  }));
+  if (a.length !== b.length) return false;
+  const sortFn = (x: { code: string }, y: { code: string }) => x.code.localeCompare(y.code);
+  a.sort(sortFn);
+  b.sort(sortFn);
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].code !== b[i].code) return false;
+    if (a[i].label !== b[i].label) return false;
+    if (a[i].stockQuantity !== b[i].stockQuantity) return false;
+  }
+  return true;
+};
+
+// inputs existing DB record + new payload, does compare every field the payload sets, returns true if identical
+const productMatchesPayload = (
+  existing: TExistingProduct,
+  payload: Record<string, unknown>,
+): boolean => {
+  for (const key of Object.keys(payload)) {
+    const newVal = payload[key];
+    if (newVal === undefined) continue;
+
+    if (key === 'category') {
+      const existingCatId = (existing.category as { documentId?: string } | null | undefined)?.documentId ?? null;
+      if (existingCatId !== newVal) return false;
+      continue;
+    }
+
+    if (key === 'variants') {
+      if (!variantsMatch(existing.variants, newVal as ReadonlyArray<{ code: string; label: string; stockQuantity?: number }>)) {
+        return false;
+      }
+      continue;
+    }
+
+    if (key === 'price') {
+      // Strapi may return decimal as string
+      if (Number(existing.price) !== Number(newVal)) return false;
+      continue;
+    }
+
+    // Scalar — treat null/undefined as equivalent
+    const a = existing[key] ?? null;
+    const b = newVal ?? null;
+    if (a !== b) return false;
+  }
+  return true;
 };
 
 // inputs raw error, does pick a photo-pipeline stage based on message, returns stage label
@@ -161,8 +243,9 @@ const runMigration = async (
       try {
         const payload = buildProductPayload(articleRows, categories);
         payloadSnapshot = { slug: payload.slug, title: payload.title };
+        const needFullData = options.mode === 'update' && !options.dryRun;
         const tLookup = performance.now();
-        const existing = await findExistingProduct(strapi, article, payload.slug);
+        const existing = await findExistingProduct(strapi, article, payload.slug, needFullData);
         job.timings.lookup.count += 1;
         job.timings.lookup.totalMs += performance.now() - tLookup;
 
@@ -180,6 +263,12 @@ const runMigration = async (
         }
 
         if (existing && options.mode === 'update') {
+          if (productMatchesPayload(existing, payload as unknown as Record<string, unknown>)) {
+            job.unchanged += 1;
+            pushLog(job, `${prefix}: UNCHANGED`);
+            job.processed = i;
+            continue;
+          }
           attemptedOperation = 'UPDATE';
           const tUpdate = performance.now();
           await strapi.documents('api::product.product').update({
@@ -229,7 +318,7 @@ const runMigration = async (
     job.status = 'completed';
     job.finishedAt = Date.now();
     const wallClockMs = job.finishedAt - job.startedAt;
-    pushLog(job, `=== DONE === created=${job.created} updated=${job.updated} skipped=${job.skipped} failed=${job.failed.length} photoFailed=${job.photoFailed.length}`);
+    pushLog(job, `=== DONE === created=${job.created} updated=${job.updated} unchanged=${job.unchanged} skipped=${job.skipped} failed=${job.failed.length} photoFailed=${job.photoFailed.length}`);
     pushLog(job, `=== TIMINGS ===`);
     pushLog(job, `Wall clock: ${fmtTotal(wallClockMs)}`);
     pushLog(job, `Lookup: avg ${fmtAvg(job.timings.lookup)} × ${job.timings.lookup.count} = ${fmtTotal(job.timings.lookup.totalMs)}`);
