@@ -15,7 +15,7 @@ const tableHeader: React.CSSProperties = {
 };
 
 const sectionTitle: React.CSSProperties = {
-  margin: '14px 0 6px',
+  margin: '16px 0 6px',
   fontSize: 13,
   fontWeight: 600,
   color: '#32324d',
@@ -33,20 +33,29 @@ const muted: React.CSSProperties = {
   color: '#666',
 };
 
-// inputs nothing, does render collapsible help block explaining Skip/Update modes, returns JSX
+const noteBlock: React.CSSProperties = {
+  ...muted,
+  padding: 10,
+  background: '#fff5e6',
+  border: '1px solid #ffd590',
+  borderRadius: 4,
+  marginTop: 8,
+};
+
+// inputs nothing, does render collapsible help block explaining all migration options, returns JSX
 const ModeHelp: React.FC = () => (
   <details
     style={{
       border: '1px solid #eaeaef',
       borderRadius: 6,
-      padding: '10px 14px',
+      padding: '12px 16px',
       background: '#fafafb',
     }}
   >
     <summary
       style={{
         cursor: 'pointer',
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: 600,
         color: '#4945ff',
         userSelect: 'none',
@@ -55,12 +64,18 @@ const ModeHelp: React.FC = () => (
       Як це працює? (детальне пояснення)
     </summary>
 
-    <div style={{ marginTop: 12 }}>
+    <div style={{ marginTop: 14 }}>
+      <p style={sectionTitle}>Загальна логіка</p>
       <p style={paragraph}>
+        Система читає CSV, групує рядки по <b>articleNumber</b>, і для кожного артикулу робить запит в базу:
+        «чи є вже продукт з таким артикулом?». Далі поведінка залежить від вибраного режиму та того, чи дійсно артикул існує.
+      </p>
+
+      <p style={sectionTitle}>Skip vs Update — таблиця</p>
+      <p style={muted}>
         Налаштування <b>Skip / Update</b> діють <b>тільки коли артикул з CSV вже існує в Strapi</b>.
         На нові продукти вони ніяк не впливають — нові завжди створюються.
       </p>
-
       <table style={{ borderCollapse: 'collapse', marginTop: 8, width: '100%' }}>
         <thead>
           <tr>
@@ -109,7 +124,7 @@ const ModeHelp: React.FC = () => (
         <li>Будь-яке інше поле, якого нема в payload</li>
       </ul>
 
-      <p style={{ ...muted, padding: 8, background: '#fff5e6', border: '1px solid #ffd590', borderRadius: 4 }}>
+      <p style={noteBlock}>
         ⚠️ <b>Нюанс по variants:</b> при Update масив варіантів повністю замінюється.
         Якщо в CSV з&apos;явився новий код кольору замість старого — старий зникне.
       </p>
@@ -121,10 +136,51 @@ const ModeHelp: React.FC = () => (
         <li>Виявили що в попередній міграції щось було неправильно розпарсено і треба переробити</li>
       </ul>
 
+      <p style={sectionTitle}>Що з фото</p>
+      <p style={paragraph}>
+        Фото з Google Drive (колонка <b>«Для Михаила»</b>) завантажуються
+        <b> тільки для нових продуктів</b>. На існуючих продуктах фото ніколи не торкаються —
+        ні в Skip, ні в Update.
+      </p>
+      <p style={muted}>
+        Це зроблено навмисно, бо сервіс завантаження <b>додає</b> фото в масив, а не замінює.
+        Тому повторний запуск Update міг би створити дублі. Якщо потрібно перезалити фото —
+        видаліть його вручну на сторінці товару і додайте через існуючу панель «Google Drive» збоку.
+      </p>
+
+      <p style={sectionTitle}>Dry-run — холостий запуск</p>
+      <p style={paragraph}>
+        Чекбокс <b>Dry-run</b> — це симуляція міграції <b>без жодних змін у БД</b>.
+        Корисно щоб перевірити CSV і подивитись що саме станеться, перед справжнім запуском.
+      </p>
+      <p style={muted}>Під час Dry-run виконується:</p>
+      <ul style={{ ...muted, paddingLeft: 18, margin: '0 0 6px' }}>
+        <li>✅ CSV парситься, рядки групуються по артикулу</li>
+        <li>✅ Будується повний payload для кожного продукту (title, slug, price, variants...)</li>
+        <li>✅ Перевіряється чи існує продукт у БД</li>
+        <li>❌ Жодних CREATE / UPDATE не виконується</li>
+        <li>❌ Фото з Drive не завантажуються</li>
+      </ul>
+      <p style={muted}>
+        У логах буде <code style={{ background: '#eaeaef', padding: '1px 4px', borderRadius: 3 }}>DRY-RUN</code> замість
+        <code style={{ background: '#eaeaef', padding: '1px 4px', borderRadius: 3, marginLeft: 4 }}>CREATED</code>
+        / <code style={{ background: '#eaeaef', padding: '1px 4px', borderRadius: 3 }}>UPDATED</code>.
+        Лічильники <i>Created / Updated / Skipped</i> залишаться нульовими.
+      </p>
+      <p style={muted}>Корисний коли:</p>
+      <ul style={{ ...muted, paddingLeft: 18, margin: '0 0 6px' }}>
+        <li>Хочете перевірити CSV на коректність до того, як міняти прод</li>
+        <li>Бачите скільки артикулів буде створено, а скільки оновлено</li>
+        <li>Перевіряєте правильно чи розпарсилися назви, варіанти, категорії</li>
+        <li>Особливо <b>перед Update</b> — щоб упевнитись, що ви оновлюєте те, що думаєте</li>
+      </ul>
+
       <p style={sectionTitle}>Поради</p>
       <ul style={{ ...muted, paddingLeft: 18, margin: 0 }}>
         <li>За замовчуванням завжди обирайте <b>Skip</b> — найбезпечніше</li>
-        <li>Перед <b>Update</b> спочатку прогоніть з увімкненим <b>Dry-run</b> — щоб переглянути в логах що саме буде оновлено, без реальних змін</li>
+        <li>Перед <b>Update</b> спочатку прогоніть з увімкненим <b>Dry-run</b></li>
+        <li>Якщо в логах багато <code style={{ background: '#eaeaef', padding: '1px 4px', borderRadius: 3 }}>FAIL</code> —
+          скачайте JSON-звіт і подивіться що саме поламалось</li>
       </ul>
     </div>
   </details>

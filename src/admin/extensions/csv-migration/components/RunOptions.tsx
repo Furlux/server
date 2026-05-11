@@ -1,6 +1,5 @@
 import React from 'react';
 import type { TMigrationOptions, TMode } from '../types';
-import ModeHelp from './ModeHelp';
 
 type TProps = {
   readonly value: TMigrationOptions;
@@ -50,13 +49,6 @@ const RunOptions: React.FC<TProps> = ({ value, disabled, onChange }) => {
           </label>
         </div>
       </div>
-
-      <p style={{ margin: 0, fontSize: 12, color: '#666', lineHeight: 1.5 }}>
-        Фото з Google Drive (колонка "Для Михаила") додаються <b>тільки для нових продуктів</b>.
-        В існуючих продуктах фото ніколи не перезаписуються.
-      </p>
-
-      <ModeHelp />
 
       <label style={labelStyle}>
         <input

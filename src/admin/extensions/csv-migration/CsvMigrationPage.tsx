@@ -5,6 +5,7 @@ import ProgressPanel from './components/ProgressPanel';
 import LogViewer from './components/LogViewer';
 import ReportPanel from './components/ReportPanel';
 import UploadProgress from './components/UploadProgress';
+import ModeHelp from './components/ModeHelp';
 import { useMigrationJob } from './hooks/useMigrationJob';
 import type { TMigrationOptions } from './types';
 
@@ -134,6 +135,8 @@ const CsvMigrationPage: React.FC = () => {
       {phase === 'done' && job ? (
         <ReportPanel job={job} onReset={handleReset} />
       ) : null}
+
+      <ModeHelp />
     </div>
   );
 };
