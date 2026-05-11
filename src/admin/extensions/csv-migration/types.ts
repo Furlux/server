@@ -2,7 +2,6 @@ export type TMode = 'skip' | 'update';
 
 export type TMigrationOptions = {
   readonly mode: TMode;
-  readonly uploadPhotos: boolean;
   readonly dryRun: boolean;
 };
 

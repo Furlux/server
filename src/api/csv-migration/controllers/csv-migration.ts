@@ -8,7 +8,6 @@ const parseOptions = (raw: unknown): TMigrationOptions => {
   const mode = modeRaw === 'update' ? 'update' : 'skip';
   return {
     mode,
-    uploadPhotos: obj.uploadPhotos !== false,
     dryRun: obj.dryRun === true,
   };
 };

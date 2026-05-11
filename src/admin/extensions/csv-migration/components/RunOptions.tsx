@@ -15,10 +15,9 @@ const labelStyle: React.CSSProperties = {
   cursor: 'pointer',
 };
 
-// inputs options value/onChange, does render radio for mode + checkboxes for flags, returns JSX
+// inputs options value/onChange, does render radio for mode + dry-run checkbox, returns JSX
 const RunOptions: React.FC<TProps> = ({ value, disabled, onChange }) => {
   const setMode = (mode: TMode) => onChange({ ...value, mode });
-  const setUploadPhotos = (uploadPhotos: boolean) => onChange({ ...value, uploadPhotos });
   const setDryRun = (dryRun: boolean) => onChange({ ...value, dryRun });
 
   return (
@@ -36,7 +35,7 @@ const RunOptions: React.FC<TProps> = ({ value, disabled, onChange }) => {
               disabled={disabled}
               onChange={() => setMode('skip')}
             />
-            Skip (пропустити дублікати)
+            Skip (пропустити дублікати — нічого не чіпаємо)
           </label>
           <label style={labelStyle}>
             <input
@@ -46,20 +45,15 @@ const RunOptions: React.FC<TProps> = ({ value, disabled, onChange }) => {
               disabled={disabled}
               onChange={() => setMode('update')}
             />
-            Update (оновити поля)
+            Update (оновити текстові поля, фото не чіпаємо)
           </label>
         </div>
       </div>
 
-      <label style={labelStyle}>
-        <input
-          type="checkbox"
-          checked={value.uploadPhotos}
-          disabled={disabled}
-          onChange={(e) => setUploadPhotos(e.target.checked)}
-        />
-        Завантажити фото з Google Drive (колонка "Для Михаила")
-      </label>
+      <p style={{ margin: 0, fontSize: 12, color: '#666', lineHeight: 1.5 }}>
+        Фото з Google Drive (колонка "Для Михаила") додаються <b>тільки для нових продуктів</b>.
+        В існуючих продуктах фото ніколи не перезаписуються.
+      </p>
 
       <label style={labelStyle}>
         <input

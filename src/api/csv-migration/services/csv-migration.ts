@@ -116,27 +116,20 @@ const runMigration = async (
           continue;
         }
 
-        let productDocumentId: string;
-
         if (existing && options.mode === 'update') {
-          const updated = (await strapi.documents('api::product.product').update({
+          await strapi.documents('api::product.product').update({
             documentId: existing.documentId,
             data: payload as never,
-          })) as { documentId: string };
-          productDocumentId = updated.documentId;
+          });
           job.updated += 1;
-          pushLog(job, `${prefix}: UPDATED`);
+          pushLog(job, `${prefix}: UPDATED (photos untouched)`);
         } else {
           const created = (await strapi.documents('api::product.product').create({
             data: payload as never,
           })) as { documentId: string };
-          productDocumentId = created.documentId;
           job.created += 1;
           pushLog(job, `${prefix}: CREATED`);
-        }
-
-        if (options.uploadPhotos) {
-          await uploadPhotoForProduct(strapi, job, firstRow, article, productDocumentId);
+          await uploadPhotoForProduct(strapi, job, firstRow, article, created.documentId);
         }
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e);

@@ -10,7 +10,6 @@ import type { TMigrationOptions } from './types';
 
 const DEFAULT_OPTIONS: TMigrationOptions = {
   mode: 'skip',
-  uploadPhotos: true,
   dryRun: false,
 };
 
