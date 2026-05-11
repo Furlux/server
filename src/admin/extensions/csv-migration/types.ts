@@ -35,6 +35,8 @@ export type TPhotoFailedItem = {
 
 export type TJobStatus = 'pending' | 'running' | 'completed' | 'failed';
 
+export type TAiSummaryStatus = 'pending' | 'done' | 'failed' | 'disabled';
+
 export type TTimingBucket = {
   readonly count: number;
   readonly totalMs: number;
@@ -60,6 +62,9 @@ export type TJobState = {
   readonly photoFailed: readonly TPhotoFailedItem[];
   readonly logs: readonly string[];
   readonly timings?: TJobTimings;
+  readonly aiSummary?: string;
+  readonly aiSummaryStatus?: TAiSummaryStatus;
+  readonly aiSummaryError?: string;
   readonly fatalError?: string;
   readonly startedAt: number;
   readonly finishedAt?: number;

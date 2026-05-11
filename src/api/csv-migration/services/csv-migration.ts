@@ -14,6 +14,7 @@ import {
   type TJobState,
   type TMigrationOptions,
 } from '../lib/job-state';
+import { generateSummary, isAiEnabled } from '../lib/ai-summarizer';
 
 // inputs buffer, does check first two bytes for gzip magic 0x1f 0x8b, returns boolean
 const isGzipBuffer = (buf: Buffer): boolean =>
@@ -235,6 +236,25 @@ const runMigration = async (
     pushLog(job, `Create: avg ${fmtAvg(job.timings.create)} × ${job.timings.create.count} = ${fmtTotal(job.timings.create.totalMs)}`);
     pushLog(job, `Update: avg ${fmtAvg(job.timings.update)} × ${job.timings.update.count} = ${fmtTotal(job.timings.update.totalMs)}`);
     pushLog(job, `Photo:  avg ${fmtAvg(job.timings.photo)} × ${job.timings.photo.count} = ${fmtTotal(job.timings.photo.totalMs)}`);
+
+    if (isAiEnabled()) {
+      job.aiSummaryStatus = 'pending';
+      void generateSummary(job)
+        .then((text) => {
+          job.aiSummary = text;
+          job.aiSummaryStatus = 'done';
+          pushLog(job, `AI summary згенеровано (${text.length} симв.)`);
+        })
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          job.aiSummaryStatus = 'failed';
+          job.aiSummaryError = message;
+          pushLog(job, `AI summary FAIL: ${message}`);
+          strapi.log.warn(`${PROGRESS_LOG_TAG} AI summary failed for ${jobId}: ${message}`);
+        });
+    } else {
+      job.aiSummaryStatus = 'disabled';
+    }
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     job.status = 'failed';

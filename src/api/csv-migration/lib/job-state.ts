@@ -45,6 +45,8 @@ export type TJobTimings = {
 
 export type TJobStatus = 'pending' | 'running' | 'completed' | 'failed';
 
+export type TAiSummaryStatus = 'pending' | 'done' | 'failed' | 'disabled';
+
 export type TJobState = {
   jobId: string;
   status: TJobStatus;
@@ -58,6 +60,9 @@ export type TJobState = {
   photoFailed: TPhotoFailedItem[];
   logs: string[];
   timings: TJobTimings;
+  aiSummary?: string;
+  aiSummaryStatus?: TAiSummaryStatus;
+  aiSummaryError?: string;
   fatalError?: string;
   startedAt: number;
   finishedAt?: number;
