@@ -6,6 +6,7 @@ import LogViewer from './components/LogViewer';
 import ReportPanel from './components/ReportPanel';
 import UploadProgress from './components/UploadProgress';
 import ModeHelp from './components/ModeHelp';
+import FailureReport from './components/FailureReport';
 import { useMigrationJob } from './hooks/useMigrationJob';
 import type { TMigrationOptions } from './types';
 
@@ -133,7 +134,10 @@ const CsvMigrationPage: React.FC = () => {
       ) : null}
 
       {phase === 'done' && job ? (
-        <ReportPanel job={job} onReset={handleReset} />
+        <>
+          <ReportPanel job={job} onReset={handleReset} />
+          <FailureReport job={job} />
+        </>
       ) : null}
 
       <ModeHelp />
