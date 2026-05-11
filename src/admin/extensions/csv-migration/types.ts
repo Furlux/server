@@ -5,15 +5,32 @@ export type TMigrationOptions = {
   readonly dryRun: boolean;
 };
 
+export type TFailedContext = {
+  readonly operation: 'CREATE' | 'UPDATE' | 'LOOKUP';
+  readonly slug?: string;
+  readonly title?: string;
+  readonly errorName?: string;
+  readonly errorDetails?: unknown;
+  readonly stack?: string;
+};
+
+export type TPhotoFailedContext = {
+  readonly errorName?: string;
+  readonly stack?: string;
+  readonly stage?: 'download' | 'convert' | 'upload' | 'attach' | 'unknown';
+};
+
 export type TFailedItem = {
   readonly article: string;
   readonly error: string;
+  readonly context?: TFailedContext;
 };
 
 export type TPhotoFailedItem = {
   readonly article: string;
   readonly url: string;
   readonly error: string;
+  readonly context?: TPhotoFailedContext;
 };
 
 export type TJobStatus = 'pending' | 'running' | 'completed' | 'failed';

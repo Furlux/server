@@ -115,22 +115,19 @@ const CsvMigrationPage: React.FC = () => {
       ) : null}
 
       {(phase === 'running' || phase === 'done') && job ? (
-        <>
-          <div style={sectionStyle}>
-            <p style={headerStyle}>Прогрес</p>
-            <ProgressPanel job={job} />
-          </div>
-          <div style={sectionStyle}>
-            <p style={headerStyle}>
-              Лог {phase === 'done' ? '(міграція завершена)' : '(оновлюється кожну секунду)'}
-            </p>
-            <LogViewer
-              logs={job.logs}
-              autoScroll={phase === 'running'}
-              allowExpand={phase === 'done'}
-            />
-          </div>
-        </>
+        <div style={sectionStyle}>
+          <p style={headerStyle}>
+            {phase === 'done' ? 'Прогрес (завершено)' : 'Прогрес (оновлюється кожні 10с)'}
+          </p>
+          <ProgressPanel job={job} />
+        </div>
+      ) : null}
+
+      {phase === 'done' && job ? (
+        <div style={sectionStyle}>
+          <p style={headerStyle}>Лог міграції</p>
+          <LogViewer logs={job.logs} autoScroll={false} allowExpand />
+        </div>
       ) : null}
 
       {phase === 'done' && job ? (

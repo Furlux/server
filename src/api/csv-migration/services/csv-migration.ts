@@ -69,6 +69,15 @@ const findExistingProduct = async (
   return bySlug;
 };
 
+// inputs raw error, does pick a photo-pipeline stage based on message, returns stage label
+const detectPhotoStage = (raw: string): 'download' | 'convert' | 'upload' | 'attach' | 'unknown' => {
+  if (/Drive download failed|drive\.usercontent|Not an image|extract.+id/i.test(raw)) return 'download';
+  if (/heic|convert/i.test(raw)) return 'convert';
+  if (/presigned URL|Gateway Time-out|ENOENT|writeFile|upload/i.test(raw)) return 'upload';
+  if (/Товар не знайдено|attach|images/i.test(raw)) return 'attach';
+  return 'unknown';
+};
+
 // inputs strapi + jobId + row[0] + productDocId, does call upload-from-drive service, returns void
 const uploadPhotoForProduct = async (
   strapi: Core.Strapi,
@@ -83,9 +92,19 @@ const uploadPhotoForProduct = async (
     const uploadService = strapi.service('api::upload-from-drive.upload-from-drive');
     await uploadService.uploadAndAttach({ url: driveUrl, productDocumentId });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : String(e);
-    job.photoFailed.push({ article, url: driveUrl, error: message });
-    pushLog(job, `  PHOTO FAIL ${article}: ${message}`);
+    const err = e as Error;
+    const message = err?.message ?? String(e);
+    job.photoFailed.push({
+      article,
+      url: driveUrl,
+      error: message,
+      context: {
+        errorName: err?.name,
+        stack: err?.stack?.split('\n').slice(0, 6).join('\n'),
+        stage: detectPhotoStage(message),
+      },
+    });
+    pushLog(job, `  PHOTO FAIL ${article} [stage=${detectPhotoStage(message)}]: ${err?.name ?? 'Error'}: ${message}`);
   }
 };
 
@@ -119,8 +138,12 @@ const runMigration = async (
       const article = (firstRow['Артикул'] || '').trim();
       const prefix = `[${i}/${job.total}] ${article}`;
 
+      let attemptedOperation: 'CREATE' | 'UPDATE' | 'LOOKUP' = 'LOOKUP';
+      let payloadSnapshot: { slug?: string; title?: string } = {};
+
       try {
         const payload = buildProductPayload(articleRows, categories);
+        payloadSnapshot = { slug: payload.slug, title: payload.title };
         const existing = await findExistingProduct(strapi, article, payload.slug);
 
         if (existing && options.mode === 'skip') {
@@ -137,6 +160,7 @@ const runMigration = async (
         }
 
         if (existing && options.mode === 'update') {
+          attemptedOperation = 'UPDATE';
           await strapi.documents('api::product.product').update({
             documentId: existing.documentId,
             data: payload as never,
@@ -144,6 +168,7 @@ const runMigration = async (
           job.updated += 1;
           pushLog(job, `${prefix}: UPDATED (photos untouched)`);
         } else {
+          attemptedOperation = 'CREATE';
           const created = (await strapi.documents('api::product.product').create({
             data: payload as never,
           })) as { documentId: string };
@@ -152,9 +177,21 @@ const runMigration = async (
           await uploadPhotoForProduct(strapi, job, firstRow, article, created.documentId);
         }
       } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : String(e);
-        job.failed.push({ article, error: message });
-        pushLog(job, `${prefix}: FAIL ${message}`);
+        const err = e as Error & { details?: unknown };
+        const message = err?.message ?? String(e);
+        job.failed.push({
+          article,
+          error: message,
+          context: {
+            operation: attemptedOperation,
+            slug: payloadSnapshot.slug,
+            title: payloadSnapshot.title,
+            errorName: err?.name,
+            errorDetails: err?.details,
+            stack: err?.stack?.split('\n').slice(0, 6).join('\n'),
+          },
+        });
+        pushLog(job, `${prefix}: FAIL [${attemptedOperation}] ${err?.name ?? 'Error'}: ${message}`);
       }
 
       job.processed = i;

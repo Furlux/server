@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getFetchClient } from '@strapi/strapi/admin';
 import type { TJobState, TMigrationOptions, TUiPhase } from '../types';
 
-const POLL_INTERVAL_MS = 1000;
+const POLL_INTERVAL_MS = 10 * 1000;
 const UPLOAD_TIMEOUT_MS = 5 * 60 * 1000;
 
 type TFetchClient = ReturnType<typeof getFetchClient>;

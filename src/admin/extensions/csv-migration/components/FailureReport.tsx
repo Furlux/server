@@ -72,10 +72,26 @@ const linkStyle: React.CSSProperties = {
   textDecoration: 'none',
 };
 
-// inputs single failed item, does render article + classified error + admin link, returns JSX
+const metaRowStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: 6,
+  flexWrap: 'wrap',
+  fontSize: 11,
+  color: '#666',
+};
+
+const metaPillStyle: React.CSSProperties = {
+  padding: '2px 8px',
+  background: '#eaeaef',
+  borderRadius: 10,
+  fontFamily: 'ui-monospace, monospace',
+};
+
+// inputs single failed item, does render article + classified error + admin link + full context, returns JSX
 const FailedRow: React.FC<{ readonly item: TFailedItem }> = ({ item }) => {
   const { title, hint } = classifyError(item.error);
   const adminUrl = buildAdminFilterUrl(item.article);
+  const ctx = item.context;
   return (
     <div style={itemStyle}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -86,18 +102,34 @@ const FailedRow: React.FC<{ readonly item: TFailedItem }> = ({ item }) => {
       </div>
       <p style={titleStyle}>{title}</p>
       <p style={hintStyle}>{hint}</p>
+      {ctx ? (
+        <div style={metaRowStyle}>
+          <span style={metaPillStyle}>op: {ctx.operation}</span>
+          {ctx.slug ? <span style={metaPillStyle}>slug: {ctx.slug}</span> : null}
+          {ctx.errorName ? <span style={metaPillStyle}>{ctx.errorName}</span> : null}
+        </div>
+      ) : null}
       <details>
         <summary style={{ fontSize: 11, color: '#666', cursor: 'pointer' }}>Технічні деталі</summary>
         <p style={{ ...detailsStyle, marginTop: 4 }}>{item.error}</p>
+        {ctx?.errorDetails ? (
+          <p style={{ ...detailsStyle, marginTop: 4 }}>
+            details: {JSON.stringify(ctx.errorDetails, null, 2)}
+          </p>
+        ) : null}
+        {ctx?.stack ? (
+          <p style={{ ...detailsStyle, marginTop: 4, fontSize: 10 }}>{ctx.stack}</p>
+        ) : null}
       </details>
     </div>
   );
 };
 
-// inputs single photo failed item, does render article + Drive link + hint, returns JSX
+// inputs single photo failed item, does render article + Drive link + hint + stage, returns JSX
 const PhotoFailedRow: React.FC<{ readonly item: TPhotoFailedItem }> = ({ item }) => {
   const { title, hint } = classifyError(item.error);
   const adminUrl = buildAdminFilterUrl(item.article);
+  const ctx = item.context;
   return (
     <div style={itemStyle}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -111,9 +143,18 @@ const PhotoFailedRow: React.FC<{ readonly item: TPhotoFailedItem }> = ({ item })
       <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ ...linkStyle, fontSize: 11 }}>
         🔗 Відкрити в Google Drive
       </a>
+      {ctx ? (
+        <div style={metaRowStyle}>
+          {ctx.stage ? <span style={metaPillStyle}>stage: {ctx.stage}</span> : null}
+          {ctx.errorName ? <span style={metaPillStyle}>{ctx.errorName}</span> : null}
+        </div>
+      ) : null}
       <details>
         <summary style={{ fontSize: 11, color: '#666', cursor: 'pointer' }}>Технічні деталі</summary>
         <p style={{ ...detailsStyle, marginTop: 4 }}>{item.error}</p>
+        {ctx?.stack ? (
+          <p style={{ ...detailsStyle, marginTop: 4, fontSize: 10 }}>{ctx.stack}</p>
+        ) : null}
       </details>
     </div>
   );
