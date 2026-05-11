@@ -11,7 +11,7 @@ import time
 import urllib.parse
 import urllib.request
 
-INPUT_CSV = '/Users/hey.michael/Downloads/furlux-products-cleaned.csv'
+INPUT_CSV = '/Users/hey.michael/Downloads/furlux-products-cleaned.csv'  # produced by clean step
 BASE = 'https://thoughtful-event-3cadde2cc2.strapiapp.com'
 TOKEN = 'c550c428dbb15a15a1054147cbae7785a25365c51e0778d1152de1d49acd2eb25a454ceacac24e97911768f3b6dcfabc79472bb5192018e91fd1ea261e9c520c95966c5e18593cceec974eecc1d68b71e9969ef4962e5278812b1fdfa8974045efdbcf84556deb55d8976b512f90fd4869508643b078317dc877e98c66321ebd'
 
@@ -53,17 +53,27 @@ def slugify(text: str) -> str:
     return out or 'product'
 
 
-# inputs row, does parse variant from column or title, returns {code, label} or None
-def parse_variant(row: dict) -> dict | None:
+# inputs row + index, does parse variant from column/title with multiple strategies, returns {code, label}
+def parse_variant(row, index=0):
     raw = (row.get('Варіанти кольорів') or '').strip()
-    if raw and ':' in raw:
-        code, label = raw.split(':', 1)
-        return {'code': code.strip(), 'label': label.strip().capitalize()}
-    # Fallback: parse from title like "... C67 темно рожевий"
+    # Strategy 1: "code:label" or "code^label"
+    if raw:
+        for sep in (':', '^'):
+            if sep in raw:
+                code, label = raw.split(sep, 1)
+                return {'code': code.strip(), 'label': label.strip().capitalize()}
+    # Strategy 2: title has explicit code "Cnumber"
     title = row.get('Товар', '')
     m = re.search(r'\s([CСcс]\d+[\w-]*)\s+(.+?)$', title)
     if m:
         return {'code': m.group(1), 'label': m.group(2).strip().capitalize()}
+    # Strategy 3: "Варіанти кольорів" has only label (no code) - generate code
+    if raw:
+        return {'code': f'V{index + 1}', 'label': raw.strip().capitalize()}
+    # Strategy 4: parse color from end of title
+    title_clean = re.sub(r'^.*?(?:сонцезахисні|поляризовані|хамелеон|комп\'ютерні|іміджеві|нейлон)\s*', '', title, flags=re.IGNORECASE)
+    if title_clean and title_clean != title:
+        return {'code': f'V{index + 1}', 'label': title_clean.strip().capitalize()}
     return None
 
 
@@ -80,19 +90,34 @@ def build_product(rows: list) -> dict:
     gender_key = (first.get('Стать') or '').strip()
     frame_type_key = (first.get('Матеріал оправи') or '').strip()
     shape_key = (first.get('Форма ') or '').strip()
-    photo_key = (first.get('Формат фото') or '').strip()
+
+    # photoFormat: catalog if ANY row marked Catalog (multi-color collection),
+    # else standard if any Standart, else legacy
+    formats = [(r.get('Формат фото') or '').strip() for r in rows]
+    if 'Catalog' in formats or len(rows) > 1:
+        photo_format = 'catalog'
+    elif 'Standart' in formats:
+        photo_format = 'standard'
+    else:
+        photo_format = 'legacy'
 
     variants = []
     total_stock = 0
     supplier_codes = []
-    for r in rows:
-        v = parse_variant(r)
-        if v and not any(x['code'] == v['code'] for x in variants):
-            variants.append(v)
+    for idx, r in enumerate(rows):
+        v = parse_variant(r, idx)
         try:
-            total_stock += int((r.get('Кільк. загальна') or '0').replace(',', '.').split('.')[0] or '0')
+            row_stock = int((r.get('Кільк. загальна') or '0').replace(',', '.').split('.')[0] or '0')
         except Exception:
-            pass
+            row_stock = 0
+        total_stock += row_stock
+        if v:
+            existing = next((x for x in variants if x['code'] == v['code']), None)
+            if existing:
+                existing['stockQuantity'] = (existing.get('stockQuantity') or 0) + row_stock
+            else:
+                v['stockQuantity'] = row_stock
+                variants.append(v)
         sc = (r.get('Код') or '').strip()
         if sc: supplier_codes.append(sc)
 
@@ -103,20 +128,24 @@ def build_product(rows: list) -> dict:
     if is_clipon:
         category_id = 'hw4pys7m5snojc8x3qq6oiw2'
 
-    # Parse price from "Сума" column (first row that has a value)
+    # Parse price from "Ціна гурт $" (USD wholesale, primary), fallback to "Сума"
     price = 0.0
     for r in rows:
-        raw_price = (r.get('Сума') or '').strip().replace(',', '.')
-        try:
-            price = float(raw_price) if raw_price else 0.0
-            if price > 0:
-                break
-        except Exception:
-            pass
+        for col in ('Ціна гурт $', 'Сума'):
+            raw_price = (r.get(col) or '').strip().replace(',', '.')
+            try:
+                p = float(raw_price) if raw_price else 0.0
+                if p > 0:
+                    price = p
+                    break
+            except Exception:
+                pass
+        if price > 0:
+            break
 
     payload = {
         'title': title,
-        'slug': f'{slugify(title)}-{article.lower()}',
+        'slug': f'{slugify(title)}-{slugify(article)}',
         'articleNumber': article,
         'supplierCode': supplier_codes[0] if supplier_codes else None,
         'price': price,
@@ -134,10 +163,7 @@ def build_product(rows: list) -> dict:
     if frame_type_key in FRAME_TYPE_MAP: payload['frameType'] = FRAME_TYPE_MAP[frame_type_key]
     if shape_key in FRAME_SHAPE_MAP: payload['frameShape'] = FRAME_SHAPE_MAP[shape_key]
     if cat_key in LENS_MAP: payload['lensType'] = LENS_MAP[cat_key]
-    if photo_key in PHOTO_FORMAT_MAP:
-        payload['photoFormat'] = PHOTO_FORMAT_MAP[photo_key]
-    else:
-        payload['photoFormat'] = 'catalog' if len(variants) > 1 else 'standard'
+    payload['photoFormat'] = photo_format
     if variants: payload['variants'] = variants
 
     return {k: v for k, v in payload.items() if v is not None}

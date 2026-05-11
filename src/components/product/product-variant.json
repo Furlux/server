@@ -13,6 +13,10 @@
     "label": {
       "type": "string",
       "required": true
+    },
+    "stockQuantity": {
+      "type": "integer",
+      "default": 0
     }
   }
 }
