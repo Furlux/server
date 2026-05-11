@@ -575,15 +575,15 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::order.order'> &
       Schema.Attribute.Private;
     monoInvoiceId: Schema.Attribute.String;
-    paymentStatus: Schema.Attribute.Enumeration<['pending', 'paid', 'failed']> &
-      Schema.Attribute.DefaultTo<'pending'>;
-    phone: Schema.Attribute.String & Schema.Attribute.Required;
-    publishedAt: Schema.Attribute.DateTime;
-    status: Schema.Attribute.Enumeration<
+    orderStatus: Schema.Attribute.Enumeration<
       ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
     > &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'pending'>;
+    paymentStatus: Schema.Attribute.Enumeration<['pending', 'paid', 'failed']> &
+      Schema.Attribute.DefaultTo<'pending'>;
+    phone: Schema.Attribute.String & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
     streetAddress: Schema.Attribute.String;
     telegramUserId: Schema.Attribute.BigInteger & Schema.Attribute.Required;
     totalPrice: Schema.Attribute.Decimal & Schema.Attribute.Required;
@@ -647,6 +647,11 @@ export interface ApiProductOptionProductOption
   };
   options: {
     draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
   };
   attributes: {
     createdAt: Schema.Attribute.DateTime;

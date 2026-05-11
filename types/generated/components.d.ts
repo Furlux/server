@@ -95,6 +95,7 @@ export interface ProductProductVariant extends Struct.ComponentSchema {
   attributes: {
     code: Schema.Attribute.String & Schema.Attribute.Required;
     label: Schema.Attribute.String & Schema.Attribute.Required;
+    stockQuantity: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
   };
 }
 

@@ -1,4 +1,5 @@
 import type { Core } from '@strapi/strapi';
+import { startCleanupInterval } from './api/csv-migration/lib/job-state';
 
 const ORDER_UID = 'api::order.order';
 const CM_KEY = `configuration_content_types::${ORDER_UID}`;
@@ -110,5 +111,7 @@ export default {
     if (count > 0) {
       strapi.log.info(`Backfilled label/itemsSummary for ${count} existing orders`);
     }
+
+    startCleanupInterval();
   },
 };
