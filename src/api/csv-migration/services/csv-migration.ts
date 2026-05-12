@@ -301,7 +301,11 @@ const runMigration = async (
           job.timings.create.totalMs += performance.now() - tCreate;
           job.created += 1;
           pushLog(job, `${prefix}: CREATED`);
-          await uploadPhotoForProduct(strapi, job, firstRow, article, created.documentId);
+          // Photo source: first row of the article whose "Для Михаила" is non-empty,
+          // not necessarily the row that came first in CSV (variants in non-first rows
+          // would otherwise leave the product photoless).
+          const photoRow = articleRows.find((r) => (r['Для Михаила'] || '').trim() !== '') ?? firstRow;
+          await uploadPhotoForProduct(strapi, job, photoRow, article, created.documentId);
         }
       } catch (e: unknown) {
         const err = e as Error & { details?: unknown };
