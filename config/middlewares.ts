@@ -5,6 +5,9 @@ export default [
   {
     name: 'strapi::cors',
     config: {
+      // Keep client custom headers allow-listed. Without 'x-telegram-init-data'
+      // the browser's OPTIONS preflight strips Access-Control-Allow-Headers and
+      // the actual fetch aborts with the generic "Load failed" WebKit error.
       headers: [
         'Content-Type',
         'Authorization',
@@ -12,6 +15,10 @@ export default [
         'Accept',
         'x-telegram-init-data',
       ],
+      // Cap browser preflight cache at 10 minutes so future header changes
+      // propagate quickly instead of being stuck behind a year-long cache
+      // (default Strapi Cloud response was Access-Control-Max-Age: 31536000).
+      maxAge: 600,
     },
   },
   'strapi::poweredBy',
