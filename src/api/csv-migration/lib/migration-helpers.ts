@@ -185,15 +185,15 @@ export const buildProductPayload = (rows: TCsvRow[], categories: TCategoriesMap)
   });
 
   const titleRaw = first['Товар'] || '';
-  const isBrand = !/\bб[\/\\]і\b/i.test(titleRaw);
+  // Unicode-aware "б/і" detection — JS \b is ASCII-only and never matches cyrillic
+  const isBrand = !/(?<![\p{L}\p{N}])б[\/\\]і(?![\p{L}\p{N}])/iu.test(titleRaw);
   const isClipon = shapeKey === 'Кліпон';
 
+  // Only use "Ціна гурт $" (USD wholesale). Do NOT fall back to "Сума" — it's in UAH
+  // and would be silently misinterpreted as USD by the frontend currency conversion.
   let price = 0;
   for (const r of rows) {
-    for (const col of ['Ціна гурт $', 'Сума']) {
-      price = parsePrice(r[col]);
-      if (price > 0) break;
-    }
+    price = parsePrice(r['Ціна гурт $']);
     if (price > 0) break;
   }
 

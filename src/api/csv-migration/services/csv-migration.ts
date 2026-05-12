@@ -249,9 +249,21 @@ const runMigration = async (
         job.timings.lookup.count += 1;
         job.timings.lookup.totalMs += performance.now() - tLookup;
 
+        const hasDriveUrl = articleRows.some((r) => (r['Для Михаила'] || '').trim() !== '');
+
         if (existing && options.mode === 'skip') {
           job.skipped += 1;
           pushLog(job, `${prefix}: SKIP (existing)`);
+          job.processed = i;
+          continue;
+        }
+
+        // Refuse to create new products without a Drive URL — the CSV is missing
+        // photo data for them and the resulting "немає зображення" placeholders
+        // pollute the catalog. Existing products are not affected.
+        if (!existing && !hasDriveUrl) {
+          job.skipped += 1;
+          pushLog(job, `${prefix}: SKIP (no Drive URL — won't create product without photo)`);
           job.processed = i;
           continue;
         }
