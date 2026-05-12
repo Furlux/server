@@ -52,4 +52,27 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     const removed = deleteJob(jobId);
     ctx.body = { success: removed };
   },
+
+  async productCount(ctx) {
+    const service = strapi.service('api::csv-migration.csv-migration');
+    const count = await service.countProducts();
+    ctx.body = { count };
+  },
+
+  async purgeProducts(ctx) {
+    const body = (ctx.request.body ?? {}) as Record<string, unknown>;
+    if (body.confirm !== 'DELETE-ALL-PRODUCTS') {
+      return ctx.badRequest('Підтвердження невірне. Потрібно передати { confirm: "DELETE-ALL-PRODUCTS" }');
+    }
+    try {
+      const service = strapi.service('api::csv-migration.csv-migration');
+      const result = await service.purgeAllProducts();
+      strapi.log.warn(`[csv-migration] PURGED ${result.deleted} products in ${(result.durationMs / 1000).toFixed(1)}s`);
+      ctx.body = { success: true, ...result };
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Невідома помилка';
+      strapi.log.error(`[csv-migration] purge failed: ${message}`);
+      return ctx.badRequest(message);
+    }
+  },
 });

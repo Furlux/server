@@ -30,5 +30,25 @@ export default {
         auth: false,
       },
     },
+    {
+      method: 'GET',
+      path: '/csv-migration/product-count',
+      handler: 'csv-migration.productCount',
+      config: {
+        policies: [],
+        middlewares: [],
+        auth: false,
+      },
+    },
+    {
+      method: 'POST',
+      path: '/csv-migration/purge-products',
+      handler: 'csv-migration.purgeProducts',
+      config: {
+        policies: [],
+        middlewares: [],
+        auth: false,
+      },
+    },
   ],
 };

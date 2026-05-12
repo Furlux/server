@@ -8,6 +8,7 @@ import UploadProgress from './components/UploadProgress';
 import ModeHelp from './components/ModeHelp';
 import FailureReport from './components/FailureReport';
 import AiSummaryCard from './components/AiSummaryCard';
+import DangerZone from './components/DangerZone';
 import { useMigrationJob } from './hooks/useMigrationJob';
 import type { TMigrationOptions } from './types';
 
@@ -154,6 +155,7 @@ const CsvMigrationPage: React.FC = () => {
       ) : null}
 
       <ModeHelp />
+      <DangerZone />
     </div>
   );
 };

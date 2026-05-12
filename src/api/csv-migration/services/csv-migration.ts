@@ -392,4 +392,34 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
   getJobState(jobId: string): TJobState | undefined {
     return getJob(jobId);
   },
+
+  // inputs nothing, does count products in DB, returns count
+  async countProducts(): Promise<number> {
+    return (await strapi.documents('api::product.product').count({})) as number;
+  },
+
+  // inputs nothing, does delete all products in batches, returns { deleted, durationMs }
+  async purgeAllProducts(): Promise<{ deleted: number; durationMs: number }> {
+    const t0 = performance.now();
+    let deleted = 0;
+    const pageSize = 100;
+    /* eslint-disable no-constant-condition */
+    while (true) {
+      const batch = (await strapi.documents('api::product.product').findMany({
+        fields: ['documentId'] as never,
+        pagination: { page: 1, pageSize },
+      })) as Array<{ documentId: string }>;
+      if (!batch || batch.length === 0) break;
+      for (const p of batch) {
+        try {
+          await strapi.documents('api::product.product').delete({ documentId: p.documentId });
+          deleted += 1;
+        } catch (e: unknown) {
+          strapi.log.warn(`${PROGRESS_LOG_TAG} purge: failed to delete ${p.documentId}: ${(e as Error).message}`);
+        }
+      }
+      if (batch.length < pageSize) break;
+    }
+    return { deleted, durationMs: performance.now() - t0 };
+  },
 });
