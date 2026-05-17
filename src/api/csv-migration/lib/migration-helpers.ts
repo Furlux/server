@@ -86,12 +86,43 @@ export const slugify = (text: string): string => {
 // inputs article string, does normalize for case-insensitive grouping, returns normalized key
 export const normalizeArticle = (article: string): string => slugify(article.trim());
 
-// inputs raw "Товар" value, does strip color variant suffix and "б/і" marker, returns trimmed base title
-// Same logic that buildProductPayload uses for the stored title — keep them in sync.
+// inputs raw "Товар" value, does strip color/variant suffix and "б/і" marker, returns trimmed base title
+// Strategy (apply in order, first match wins):
+//   1. Drop "б/і" marker so it never contaminates the key.
+//   2. C-code pattern: " C1 чорний" / " С12 синій" → cut from the C-code onwards.
+//   3. Lens-type heuristic for titles without a C-code: locate the lens-type keyword
+//      (поляризовані / сонцезахисні / хамелеон / комп / нейлон / іміджеві), optionally
+//      keep the next gender word (дитячі / жіночі / чоловічі), drop the rest as colour.
+//   4. Nothing matched → return the title as-is (prefer over-split to mis-merge).
+// Unicode-aware word boundary for cyrillic: `\b` and `\w` in JS only see ASCII,
+// so we use lookarounds over Unicode letter/number property classes instead.
+const LENS_TYPE_RE = /(?<![\p{L}\p{N}])(сонцезахисн[\p{L}]*|поляризован[\p{L}]*|хамелеон[\p{L}]*|комп(?:['ʼ]?ютерн[\p{L}]*)?|нейлон[\p{L}]*|іміджев[\p{L}]*|імідж)(?![\p{L}\p{N}])/iu;
+const GENDER_TAIL_RE = /^(дитяч[\p{L}]*|жіноч[\p{L}]*|чоловіч[\p{L}]*)(?![\p{L}\p{N}])/iu;
+
 export const cleanTitleForGrouping = (rawTitle: string): string => {
   if (!rawTitle) return '';
-  let cleaned = rawTitle.replace(/\s+[CСcс]\d+[\w-]*\s+.+$/, '').trim();
-  cleaned = cleaned.replace(/\s+б\/і\s+/, ' ').trim();
+  let cleaned = rawTitle.replace(/\s+б[\/\\]і\s+/i, ' ').trim();
+
+  // Layer 1: "<base> C\d+ <color>" → "<base>"
+  const cCode = cleaned.match(/^(.+?)\s+[CСcс]\d+(?![\p{L}\p{N}])/u);
+  if (cCode) {
+    return cCode[1].trim();
+  }
+
+  // Layer 2: lens-type anchor — keep title up to and including the lens type,
+  // plus optional immediate gender word ("дитячі чорний" → keep "дитячі", drop "чорний").
+  const lens = cleaned.match(LENS_TYPE_RE);
+  if (lens && lens.index !== undefined) {
+    const endOfLens = lens.index + lens[0].length;
+    const head = cleaned.substring(0, endOfLens);
+    const tail = cleaned.substring(endOfLens).trim();
+    const genderTail = tail.match(GENDER_TAIL_RE);
+    if (genderTail) {
+      return `${head} ${genderTail[0]}`.trim();
+    }
+    return head.trim();
+  }
+
   return cleaned;
 };
 
@@ -158,8 +189,15 @@ export const buildProductPayload = (rows: TCsvRow[], categories: TCategoriesMap)
   const first = rows[0];
   const article = (first['Артикул'] || '').trim();
 
-  let title = (first['Товар'] || '').replace(/\s+[CСcс]\d+[\w-]*\s+.+$/, '').trim();
-  title = title.replace(/\s+б\/і\s+/, ' ').trim();
+  // For the stored title we use a conservative cleanup — only strip the
+  // " C\d+ <colour>" suffix and "б/і" marker. We can't apply the full
+  // cleanTitleForGrouping logic here because it cuts everything after the
+  // lens-type keyword, which for titles like "Окуляри сонцезахисні Ver 6960
+  // бежевий" would also drop the article and brand. The grouping key uses
+  // the aggressive cleanup; the display title preserves more.
+  const rawTitle = first['Товар'] || '';
+  let title = rawTitle.replace(/\s+[CСcс]\d+[\w-]*\s+.+$/u, '').trim();
+  title = title.replace(/\s+б[\/\\]і\s+/iu, ' ').trim();
 
   const catKey = (first['Категорія'] || '').trim();
   const genderKey = (first['Стать'] || '').trim();
