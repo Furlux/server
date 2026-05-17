@@ -86,6 +86,18 @@ export const slugify = (text: string): string => {
 // inputs article string, does normalize for case-insensitive grouping, returns normalized key
 export const normalizeArticle = (article: string): string => slugify(article.trim());
 
+// inputs raw "Товар" value, does strip color variant suffix and "б/і" marker, returns trimmed base title
+// Same logic that buildProductPayload uses for the stored title — keep them in sync.
+export const cleanTitleForGrouping = (rawTitle: string): string => {
+  if (!rawTitle) return '';
+  let cleaned = rawTitle.replace(/\s+[CСcс]\d+[\w-]*\s+.+$/, '').trim();
+  cleaned = cleaned.replace(/\s+б\/і\s+/, ' ').trim();
+  return cleaned;
+};
+
+// inputs raw "Товар" value, does normalize cleaned title for grouping (case/whitespace insensitive), returns key fragment
+const titleGroupingKey = (rawTitle: string): string => slugify(cleanTitleForGrouping(rawTitle));
+
 // inputs row + index, does parse variant from column/title via 4 strategies, returns parsed variant or null
 export const parseVariant = (row: TCsvRow, index: number): TParsedVariant | null => {
   const raw = (row['Варіанти кольорів'] || '').trim();
@@ -230,13 +242,16 @@ export const buildProductPayload = (rows: TCsvRow[], categories: TCategoriesMap)
   return payload;
 };
 
-// inputs rows array, does group by article number with case-insensitive normalization, returns Map<normalizedArticle, rows>
+// inputs rows array, does group by (article + cleaned title) so overloaded article numbers
+// (one supplier code reused for physically different models) split into separate products, returns Map<key, rows>
 export const groupByArticle = (rows: TCsvRow[]): Map<string, TCsvRow[]> => {
   const map = new Map<string, TCsvRow[]>();
   for (const r of rows) {
     const art = (r['Артикул'] || '').trim();
     if (!art) continue;
-    const key = normalizeArticle(art);
+    // Composite key: article + slug of cleaned title. Rows that share an article but
+    // describe different models (different brand/title) end up in separate groups.
+    const key = `${normalizeArticle(art)}::${titleGroupingKey(r['Товар'] || '')}`;
     const bucket = map.get(key);
     if (bucket) {
       bucket.push(r);

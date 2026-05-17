@@ -73,29 +73,24 @@ const COMPARE_FIELDS = [
   'productStatus', 'photoFormat', 'gender', 'frameType', 'frameShape', 'lensType',
 ] as const;
 
-// inputs strapi + article + computed slug + withFullData flag, does find existing product, returns product or null
+// inputs strapi + computed slug + withFullData flag, does find existing product by slug, returns product or null
+// Slug is the unique identity in our world: it already encodes article + cleaned title, so two
+// physically different models that happen to share an article number get different slugs and live as
+// independent products. Article-only lookup is intentionally NOT used as a fallback — it would
+// incorrectly match the first product with the same article, defeating the split grouping.
 const findExistingProduct = async (
   strapi: Core.Strapi,
-  article: string,
   slug: string,
   withFullData: boolean,
 ): Promise<TExistingProduct | null> => {
   const fields = (withFullData ? [...COMPARE_FIELDS] : ['articleNumber', 'slug']) as never;
   const populate = (withFullData ? { category: { fields: ['documentId'] }, variants: true } : undefined) as never;
 
-  const byArticle = (await strapi.documents('api::product.product').findFirst({
-    filters: { articleNumber: { $eq: article } },
-    fields,
-    populate,
-  })) as TExistingProduct | null;
-  if (byArticle) return byArticle;
-
-  const bySlug = (await strapi.documents('api::product.product').findFirst({
+  return (await strapi.documents('api::product.product').findFirst({
     filters: { slug: { $eq: slug } },
     fields,
     populate,
   })) as TExistingProduct | null;
-  return bySlug;
 };
 
 // inputs existing variants array + payload variants, does compare ignoring DB ids and order, returns boolean
@@ -245,7 +240,7 @@ const runMigration = async (
         payloadSnapshot = { slug: payload.slug, title: payload.title };
         const needFullData = options.mode === 'update' && !options.dryRun;
         const tLookup = performance.now();
-        const existing = await findExistingProduct(strapi, article, payload.slug, needFullData);
+        const existing = await findExistingProduct(strapi, payload.slug, needFullData);
         job.timings.lookup.count += 1;
         job.timings.lookup.totalMs += performance.now() - tLookup;
 
