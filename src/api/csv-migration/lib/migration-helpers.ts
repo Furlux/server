@@ -37,20 +37,35 @@ const TRANSLIT: Record<string, string> = {
   ь: '', ю: 'yu', я: 'ya', "'": '', '"': '',
 };
 
+// Maps CSV "Категорія" column values to DB category slugs. Slugs on the right
+// MUST match what the categories actually have in the database, otherwise
+// categories.get(slug) returns undefined and the product gets no category
+// assignment. Verified against prod DB: soniachni / polaryzovani / hameleony /
+// kompiuterni (not the natural transliteration). Multiple keys map to the same
+// slug because the CSV occasionally has typos ("Сонцезахині" without 'с') or
+// uses shorter/longer variants of the category name.
 export const CATEGORY_NAME_TO_SLUG: Record<string, string> = {
-  'Сонцезахині': 'soncezakhysni',
-  'Поляризовані': 'polyaryzovani',
-  'Хамелеон': 'khameleon',
-  "Комп'ютер/імідж": 'kompiuter',
+  'Сонцезахисні': 'soniachni',
+  'Сонцезахині': 'soniachni',
+  'Поляризовані': 'polaryzovani',
+  'Хамелеон': 'hameleony',
+  'Хамелеони': 'hameleony',
+  "Комп'ютер/імідж": 'kompiuterni',
+  "Комп'ютерні": 'kompiuterni',
+  'Іміджеві': 'kompiuterni',
 };
 
 export const CLIPON_CATEGORY_SLUG = 'klipony';
 
 const LENS_MAP: Record<string, string> = {
+  'Сонцезахисні': 'сонцезахисні',
   'Сонцезахині': 'сонцезахисні',
   'Поляризовані': 'поляризовані',
   'Хамелеон': 'хамелеон',
+  'Хамелеони': 'хамелеон',
   "Комп'ютер/імідж": "комп'ютер",
+  "Комп'ютерні": "комп'ютер",
+  'Іміджеві': "комп'ютер",
 };
 
 const GENDER_MAP: Record<string, 'children' | 'women' | 'men' | 'unisex'> = {
