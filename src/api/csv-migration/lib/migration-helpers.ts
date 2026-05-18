@@ -72,6 +72,9 @@ const GENDER_MAP: Record<string, 'children' | 'women' | 'men' | 'unisex'> = {
   'Жіночі': 'women',
   'Унісекс': 'unisex',
   'Чоловічі': 'men',
+  'Дитячі': 'children',
+  'Дитяча': 'children',
+  'Діти': 'children',
 };
 
 const FRAME_TYPE_MAP: Record<string, string> = {
