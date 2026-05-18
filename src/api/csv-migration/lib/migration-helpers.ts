@@ -294,34 +294,42 @@ const priceKey = (raw: string | undefined): string => {
 };
 
 // inputs rows array, does hybrid grouping: structural CSV columns first, title fingerprint
-// as a tiebreaker. Two rows merge into one product iff their (Артикул, Категорія, Стать,
-// Ціна гурт $, slugified title fingerprint) all match. Empty CSV cells contribute an empty
-// segment to the key — so two rows that both omit Категорія still match on that axis.
+// only as a tiebreaker for poorly-filled rows. Two rows merge into one product iff their
+// composite key matches.
+//
+// Key shape: `${art}::${cat}::${gender}::${price}::${fingerprint}`
+//   - fingerprint is EMPTY when cat+gender+price are all populated (a fully-filled row
+//     has enough structural signal to separate physically different products on its own).
+//   - fingerprint is the slugified cleaned title only when at least one structural axis
+//     is missing — then it acts as a fallback to keep distinct rows from collapsing
+//     into one bucket.
 //
 // Why this shape:
 // - CSV has ~10000 rows where Артикул (97%) and Ціна (96%) are well-populated but
-//   Категорія / Стать / Матеріал sit around 42%. Pure column-keying would collapse all
-//   poorly-filled rows into one giant bucket; pure title-regex keying is too fragile
-//   (every new word in a colour suffix is a regression). The hybrid keeps each axis
-//   contributing whenever it's actually filled.
-// - When the operator filled the row properly, structural columns alone separate
-//   physically different products (907 Армада чоловіча $0.50 vs. 907 жіноча $5.00).
-// - Title fingerprint then disambiguates within an otherwise-identical bucket — so
-//   "Окуляри Armada 907" and "Окуляри Pol 907" with the same category/gender/price
-//   still split.
-// - Worst case (no columns filled, fingerprint can't help): two unrelated rows merge
-//   into one product. That's visible as an obvious "weird product" card the operator
-//   can split manually — strictly better than silently mixing prices like the old
-//   pure-article grouping did.
+//   Категорія / Стать / Матеріал sit around 42%.
+// - Fully-filled rows for the same product (e.g. 16 colour variants of 8217) share
+//   the same cat+gender+price → drop fingerprint → one bucket → one product with
+//   16 variants. Fingerprint as a primary axis was over-splitting because
+//   cleanTitleForGrouping can't reliably strip "<colour> C13" off every title.
+// - Different products that happen to share an article (907 Армада чоловіча $0.50 vs.
+//   907 жіноча $5.00) still split — different gender/price → different keys.
+// - Poorly-filled rows fall back to fingerprint disambiguation so they don't collapse
+//   into one giant bucket.
+// - Worst case (no columns filled, fingerprint can't help): two unrelated rows merge.
+//   That's visible as an obvious "weird product" card the operator can split manually —
+//   strictly better than silently mixing prices like the old pure-article grouping did.
 export const groupByArticle = (rows: TCsvRow[]): Map<string, TCsvRow[]> => {
   const map = new Map<string, TCsvRow[]>();
   for (const r of rows) {
     const art = (r['Артикул'] || '').trim();
     if (!art) continue;
-    const cat = slugify((r['Категорія'] || '').trim());
-    const gender = slugify((r['Стать'] || '').trim());
+    const catRaw = (r['Категорія'] || '').trim();
+    const genderRaw = (r['Стать'] || '').trim();
     const price = priceKey(r['Ціна гурт $']);
-    const fingerprint = titleGroupingKey(r['Товар'] || '');
+    const hasFullStructural = catRaw !== '' && genderRaw !== '' && price !== '';
+    const cat = catRaw ? slugify(catRaw) : '';
+    const gender = genderRaw ? slugify(genderRaw) : '';
+    const fingerprint = hasFullStructural ? '' : titleGroupingKey(r['Товар'] || '');
     const key = `${normalizeArticle(art)}::${cat}::${gender}::${price}::${fingerprint}`;
     const bucket = map.get(key);
     if (bucket) {

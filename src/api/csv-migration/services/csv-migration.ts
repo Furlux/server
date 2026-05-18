@@ -30,6 +30,7 @@ const decodePayload = (csvBase64: string): string => {
 };
 
 const RATE_LIMIT_MS = 0;
+const PHOTO_CONCURRENCY = 5;
 const PROGRESS_LOG_TAG = '[csv-migration]';
 
 // inputs nothing, does sleep for given ms, returns Promise
@@ -225,6 +226,27 @@ const runMigration = async (
     const categories = await resolveCategoriesBySlug(strapi);
     pushLog(job, `Завантажено ${categories.size} категорій з БД`);
 
+    // Bounded concurrency for Drive→Strapi photo uploads. Main loop fires up to
+    // PHOTO_CONCURRENCY uploads in parallel, then back-pressures by awaiting the
+    // earliest in-flight upload before launching the next. Errors are captured
+    // inside uploadPhotoForProduct (it never rejects), so awaiting these promises
+    // can't throw.
+    const inFlightPhotos = new Set<Promise<void>>();
+    const waitForPhotoSlot = async (): Promise<void> => {
+      while (inFlightPhotos.size >= PHOTO_CONCURRENCY) {
+        await Promise.race(inFlightPhotos);
+      }
+    };
+    const launchPhotoUpload = (
+      row: TCsvRow,
+      art: string,
+      docId: string,
+    ): void => {
+      const p: Promise<void> = uploadPhotoForProduct(strapi, job, row, art, docId)
+        .finally(() => { inFlightPhotos.delete(p); });
+      inFlightPhotos.add(p);
+    };
+
     let i = 0;
     for (const [, articleRows] of groups) {
       i += 1;
@@ -300,7 +322,8 @@ const runMigration = async (
           // not necessarily the row that came first in CSV (variants in non-first rows
           // would otherwise leave the product photoless).
           const photoRow = articleRows.find((r) => (r['Для Михаила'] || '').trim() !== '') ?? firstRow;
-          await uploadPhotoForProduct(strapi, job, photoRow, article, created.documentId);
+          await waitForPhotoSlot();
+          launchPhotoUpload(photoRow, article, created.documentId);
         }
       } catch (e: unknown) {
         const err = e as Error & { details?: unknown };
@@ -324,6 +347,11 @@ const runMigration = async (
       if (RATE_LIMIT_MS > 0) {
         await sleep(RATE_LIMIT_MS);
       }
+    }
+
+    if (inFlightPhotos.size > 0) {
+      pushLog(job, `Очікую завершення ${inFlightPhotos.size} фонових завантажень фото...`);
+      await Promise.allSettled([...inFlightPhotos]);
     }
 
     job.status = 'completed';
