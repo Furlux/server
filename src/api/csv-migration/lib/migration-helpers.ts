@@ -207,6 +207,37 @@ const parsePrice = (raw: string | undefined): number => {
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
 
+// inputs CSV value + lookup map, does case-insensitive trimmed lookup, returns mapped value or undefined
+// Falls back to case-insensitive comparison when the exact key isn't present,
+// so the CSV can use "дитячі" or "Дитячі " (with trailing space) without breaking.
+const findInMap = <V>(key: string, map: Record<string, V>): V | undefined => {
+  if (!key) return undefined;
+  const direct = map[key];
+  if (direct !== undefined) return direct;
+  const needle = key.toLowerCase().trim();
+  if (!needle) return undefined;
+  for (const [k, v] of Object.entries(map)) {
+    if (k.toLowerCase().trim() === needle) return v;
+  }
+  return undefined;
+};
+
+// inputs raw title, does detect gender keyword embedded in the title, returns gender or undefined
+// Last-resort fallback for rows whose "Стать" CSV column is empty but whose title
+// contains "дитячі"/"жіночі"/"чоловічі"/"унісекс" anyway. Unicode lookbehinds keep
+// the match anchored at a word boundary (JS \b is ASCII-only).
+const inferGenderFromTitle = (
+  title: string,
+): 'children' | 'women' | 'men' | 'unisex' | undefined => {
+  if (!title) return undefined;
+  const t = title.toLowerCase();
+  if (/(?<![\p{L}])(дитяч|діт)(?=[\p{L}\s])/u.test(t)) return 'children';
+  if (/(?<![\p{L}])жіноч/u.test(t)) return 'women';
+  if (/(?<![\p{L}])чолов/u.test(t)) return 'men';
+  if (/(?<![\p{L}])унісек/u.test(t)) return 'unisex';
+  return undefined;
+};
+
 // inputs article rows + categories map, does build full product payload, returns payload object
 export const buildProductPayload = (rows: TCsvRow[], categories: TCategoriesMap): TProductPayload => {
   const first = rows[0];
@@ -289,15 +320,29 @@ export const buildProductPayload = (rows: TCsvRow[], categories: TCategoriesMap)
   let categoryId: string | undefined;
   if (isClipon) {
     categoryId = categories.get(CLIPON_CATEGORY_SLUG);
-  } else if (catKey && CATEGORY_NAME_TO_SLUG[catKey]) {
-    categoryId = categories.get(CATEGORY_NAME_TO_SLUG[catKey]);
+  } else {
+    const catSlug = findInMap(catKey, CATEGORY_NAME_TO_SLUG);
+    if (catSlug) categoryId = categories.get(catSlug);
   }
   if (categoryId) payload.category = categoryId;
 
-  if (genderKey && GENDER_MAP[genderKey]) payload.gender = GENDER_MAP[genderKey];
-  if (frameTypeKey && FRAME_TYPE_MAP[frameTypeKey]) payload.frameType = FRAME_TYPE_MAP[frameTypeKey];
-  if (shapeKey && FRAME_SHAPE_MAP[shapeKey]) payload.frameShape = FRAME_SHAPE_MAP[shapeKey];
-  if (catKey && LENS_MAP[catKey]) payload.lensType = LENS_MAP[catKey];
+  const mappedGender = findInMap(genderKey, GENDER_MAP);
+  if (mappedGender) {
+    payload.gender = mappedGender;
+  } else {
+    const inferred = inferGenderFromTitle(title);
+    if (inferred) payload.gender = inferred;
+  }
+
+  const mappedFrameType = findInMap(frameTypeKey, FRAME_TYPE_MAP);
+  if (mappedFrameType) payload.frameType = mappedFrameType;
+
+  const mappedShape = findInMap(shapeKey, FRAME_SHAPE_MAP);
+  if (mappedShape) payload.frameShape = mappedShape;
+
+  const mappedLens = findInMap(catKey, LENS_MAP);
+  if (mappedLens) payload.lensType = mappedLens;
+
   if (variants.length > 0) payload.variants = variants;
 
   return payload;
