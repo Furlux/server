@@ -118,6 +118,45 @@ const LENS_TYPE_RE = /(?<![\p{L}\p{N}])(сонцезахисн[\p{L}]*|поля�
 const LENS_TYPE_RE_GLOBAL = /(?<![\p{L}\p{N}])(сонцезахисн[\p{L}]*|поляризован[\p{L}]*|хамелеон[\p{L}]*|комп(?:['ʼ]?ютерн[\p{L}]*)?|нейлон[\p{L}]*|іміджев[\p{L}]*|імідж|скло|стекло|маленьк[\p{L}]*)(?![\p{L}\p{N}])/giu;
 const GENDER_TAIL_RE = /^(дитяч[\p{L}]*|жіноч[\p{L}]*|чоловіч[\p{L}]*)(?![\p{L}\p{N}])/iu;
 
+// Ukrainian colour stems used to detect a trailing colour suffix in the
+// stored title. We match the stem, then absorb any gender/case ending —
+// "чорн" covers чорний/чорна/чорне/чорному; "дзерк" covers дзеркальний.
+// Compound colours joined by "/" or "-" ("дзерк/жовтий", "темно-зелений")
+// are absorbed by the inner alternation. Order doesn't matter.
+const COLOR_STEMS = [
+  'чорн', 'біл', 'червон', 'зелен', 'син', 'блакитн', 'рожев', 'бузков',
+  'малинов', 'жовт', 'бежев', 'коричнев', 'фіолетов', 'сір', 'золот',
+  'сріб', 'бордов', 'оранжев', 'помаранчев', 'бронзов', 'перлин', 'металік',
+  'темн', 'світл', 'дзеркальн', 'дзерк', 'прозор', 'матов', 'глянц',
+  'градієнт', 'хакі', 'кремов', 'шоколад', 'корал', 'лілов', 'нюд',
+  'ванільн', 'мідн', 'нейтральн', 'тіл',
+] as const;
+const COLOR_ALT = COLOR_STEMS.join('|');
+const TRAILING_COLOR_RE = new RegExp(
+  `\\s+(?:(?:${COLOR_ALT})[\\p{L}]*(?:[\\/\\-](?:${COLOR_ALT})[\\p{L}]*)*)\\s*$`,
+  'iu',
+);
+const TRAILING_C_CODE_RE = /\s+[CСcс]\d+[\w\-]*\s*$/u;
+
+// inputs raw title, does iteratively strip trailing C-code + colour run, returns clean display title
+// Safety: only strips when the title actually has a lens-type keyword
+// (поляризовані/сонцезахисні/etc.) — without that anchor we can't tell a
+// trailing colour word apart from a proper noun, so we'd rather leave the
+// title intact than over-strip something like "Окуляри Чорний бриз".
+const stripTrailingColorAndCode = (title: string): string => {
+  if (!title || !LENS_TYPE_RE.test(title)) return title;
+  let result = title.trimEnd();
+  for (let i = 0; i < 8; i += 1) {
+    const next = result
+      .replace(TRAILING_C_CODE_RE, '')
+      .replace(TRAILING_COLOR_RE, '')
+      .trimEnd();
+    if (next === result) break;
+    result = next;
+  }
+  return result;
+};
+
 export const cleanTitleForGrouping = (rawTitle: string): string => {
   if (!rawTitle) return '';
   let cleaned = rawTitle.replace(/\s+б[\/\\]і\s+/i, ' ').trim();
@@ -243,15 +282,17 @@ export const buildProductPayload = (rows: TCsvRow[], categories: TCategoriesMap)
   const first = rows[0];
   const article = (first['Артикул'] || '').trim();
 
-  // For the stored title we use a conservative cleanup — only strip the
-  // " C\d+ <colour>" suffix and "б/і" marker. We can't apply the full
-  // cleanTitleForGrouping logic here because it cuts everything after the
-  // lens-type keyword, which for titles like "Окуляри сонцезахисні Ver 6960
-  // бежевий" would also drop the article and brand. The grouping key uses
-  // the aggressive cleanup; the display title preserves more.
+  // For the stored title we drop the "б/і" marker and any trailing colour /
+  // C-code suffix. Old CSVs used "<base> C5 чорний" (code first), the current
+  // ones use "<base> чорний C5" or just "<base> чорний", and some omit the
+  // code entirely. stripTrailingColorAndCode handles all three orderings
+  // without dropping the article number — it requires a lens-type keyword
+  // to be present before it strips anything, so titles like "Окуляри
+  // сонцезахисні Ver 6960 бежевий" become "Окуляри сонцезахисні Ver 6960"
+  // (article preserved, colour stripped).
   const rawTitle = first['Товар'] || '';
-  let title = rawTitle.replace(/\s+[CСcс]\d+[\w-]*\s+.+$/u, '').trim();
-  title = title.replace(/\s+б[\/\\]і\s+/iu, ' ').trim();
+  let title = rawTitle.replace(/\s+б[\/\\]і\s+/iu, ' ').trim();
+  title = stripTrailingColorAndCode(title).trim();
 
   const catKey = (first['Категорія'] || '').trim();
   const genderKey = (first['Стать'] || '').trim();
