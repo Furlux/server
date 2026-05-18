@@ -96,7 +96,8 @@ export const normalizeArticle = (article: string): string => slugify(article.tri
 //   4. Nothing matched → return the title as-is (prefer over-split to mis-merge).
 // Unicode-aware word boundary for cyrillic: `\b` and `\w` in JS only see ASCII,
 // so we use lookarounds over Unicode letter/number property classes instead.
-const LENS_TYPE_RE = /(?<![\p{L}\p{N}])(сонцезахисн[\p{L}]*|поляризован[\p{L}]*|хамелеон[\p{L}]*|комп(?:['ʼ]?ютерн[\p{L}]*)?|нейлон[\p{L}]*|іміджев[\p{L}]*|імідж)(?![\p{L}\p{N}])/iu;
+const LENS_TYPE_RE = /(?<![\p{L}\p{N}])(сонцезахисн[\p{L}]*|поляризован[\p{L}]*|хамелеон[\p{L}]*|комп(?:['ʼ]?ютерн[\p{L}]*)?|нейлон[\p{L}]*|іміджев[\p{L}]*|імідж|скло|стекло|маленьк[\p{L}]*)(?![\p{L}\p{N}])/iu;
+const LENS_TYPE_RE_GLOBAL = /(?<![\p{L}\p{N}])(сонцезахисн[\p{L}]*|поляризован[\p{L}]*|хамелеон[\p{L}]*|комп(?:['ʼ]?ютерн[\p{L}]*)?|нейлон[\p{L}]*|іміджев[\p{L}]*|імідж|скло|стекло|маленьк[\p{L}]*)(?![\p{L}\p{N}])/giu;
 const GENDER_TAIL_RE = /^(дитяч[\p{L}]*|жіноч[\p{L}]*|чоловіч[\p{L}]*)(?![\p{L}\p{N}])/iu;
 
 export const cleanTitleForGrouping = (rawTitle: string): string => {
@@ -154,12 +155,16 @@ export const parseVariant = (row: TCsvRow, index: number): TParsedVariant | null
     return { code: `V${index + 1}`, label: capitalize(raw) };
   }
 
-  const stripped = title.replace(
-    /^.*?(?:сонцезахисні|поляризовані|хамелеон|комп'ютерні|іміджеві|нейлон)\s*/i,
-    ''
-  );
-  if (stripped && stripped !== title) {
-    return { code: `V${index + 1}`, label: capitalize(stripped.trim()) };
+  // Strategy 4: find the LAST lens-type anchor in the title — for chains like
+  // "...маленькі скло чорний..." we want to peel off everything starting from
+  // the colour, not after the first qualifier word.
+  const allLens = [...title.matchAll(LENS_TYPE_RE_GLOBAL)];
+  if (allLens.length > 0) {
+    const last = allLens[allLens.length - 1];
+    const afterLens = title.substring((last.index ?? 0) + last[0].length).trim();
+    if (afterLens) {
+      return { code: `V${index + 1}`, label: capitalize(afterLens) };
+    }
   }
 
   return null;
