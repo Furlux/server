@@ -285,16 +285,44 @@ export const buildProductPayload = (rows: TCsvRow[], categories: TCategoriesMap)
   return payload;
 };
 
-// inputs rows array, does group by (article + cleaned title) so overloaded article numbers
-// (one supplier code reused for physically different models) split into separate products, returns Map<key, rows>
+// inputs raw price string, does normalize for grouping key (handles decimal commas), returns canonical string
+const priceKey = (raw: string | undefined): string => {
+  if (!raw) return '';
+  const cleaned = raw.trim().replace(',', '.');
+  const n = parseFloat(cleaned);
+  return Number.isFinite(n) && n > 0 ? n.toFixed(2) : '';
+};
+
+// inputs rows array, does hybrid grouping: structural CSV columns first, title fingerprint
+// as a tiebreaker. Two rows merge into one product iff their (Артикул, Категорія, Стать,
+// Ціна гурт $, slugified title fingerprint) all match. Empty CSV cells contribute an empty
+// segment to the key — so two rows that both omit Категорія still match on that axis.
+//
+// Why this shape:
+// - CSV has ~10000 rows where Артикул (97%) and Ціна (96%) are well-populated but
+//   Категорія / Стать / Матеріал sit around 42%. Pure column-keying would collapse all
+//   poorly-filled rows into one giant bucket; pure title-regex keying is too fragile
+//   (every new word in a colour suffix is a regression). The hybrid keeps each axis
+//   contributing whenever it's actually filled.
+// - When the operator filled the row properly, structural columns alone separate
+//   physically different products (907 Армада чоловіча $0.50 vs. 907 жіноча $5.00).
+// - Title fingerprint then disambiguates within an otherwise-identical bucket — so
+//   "Окуляри Armada 907" and "Окуляри Pol 907" with the same category/gender/price
+//   still split.
+// - Worst case (no columns filled, fingerprint can't help): two unrelated rows merge
+//   into one product. That's visible as an obvious "weird product" card the operator
+//   can split manually — strictly better than silently mixing prices like the old
+//   pure-article grouping did.
 export const groupByArticle = (rows: TCsvRow[]): Map<string, TCsvRow[]> => {
   const map = new Map<string, TCsvRow[]>();
   for (const r of rows) {
     const art = (r['Артикул'] || '').trim();
     if (!art) continue;
-    // Composite key: article + slug of cleaned title. Rows that share an article but
-    // describe different models (different brand/title) end up in separate groups.
-    const key = `${normalizeArticle(art)}::${titleGroupingKey(r['Товар'] || '')}`;
+    const cat = slugify((r['Категорія'] || '').trim());
+    const gender = slugify((r['Стать'] || '').trim());
+    const price = priceKey(r['Ціна гурт $']);
+    const fingerprint = titleGroupingKey(r['Товар'] || '');
+    const key = `${normalizeArticle(art)}::${cat}::${gender}::${price}::${fingerprint}`;
     const bucket = map.get(key);
     if (bucket) {
       bucket.push(r);
