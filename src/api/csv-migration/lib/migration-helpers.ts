@@ -41,9 +41,16 @@ const TRANSLIT: Record<string, string> = {
 // MUST match what the categories actually have in the database, otherwise
 // categories.get(slug) returns undefined and the product gets no category
 // assignment. Verified against prod DB: soniachni / polaryzovani / hameleony /
-// kompiuterni (not the natural transliteration). Multiple keys map to the same
-// slug because the CSV occasionally has typos ("Сонцезахині" without 'с') or
-// uses shorter/longer variants of the category name.
+// kompiuterni / futliary / opravy / aksesuary (not the natural transliteration).
+// Multiple keys map to the same slug because the CSV occasionally has typos
+// ("Сонцезахині" without 'с') or uses shorter/longer variants of the category
+// name.
+//
+// Note: "Дитячі" and "Брендові" are intentionally NOT in this map — the
+// frontend computes those categories from gender = "children" and
+// isBrand = true respectively (see filters/product.query.ts), not from a
+// category relation. The CSV's "Стать"/"Дитячі" column drives gender, and
+// the absence of "б/і" in the title drives isBrand.
 export const CATEGORY_NAME_TO_SLUG: Record<string, string> = {
   'Сонцезахисні': 'soniachni',
   'Сонцезахині': 'soniachni',
@@ -53,6 +60,12 @@ export const CATEGORY_NAME_TO_SLUG: Record<string, string> = {
   "Комп'ютер/імідж": 'kompiuterni',
   "Комп'ютерні": 'kompiuterni',
   'Іміджеві': 'kompiuterni',
+  'Футляри': 'futliary',
+  'Футляр': 'futliary',
+  'Оправи': 'opravy',
+  'Оправа': 'opravy',
+  'Аксесуари': 'aksesuary',
+  'Аксесуар': 'aksesuary',
 };
 
 export const CLIPON_CATEGORY_SLUG = 'klipony';
