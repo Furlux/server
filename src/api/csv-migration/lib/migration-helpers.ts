@@ -117,6 +117,18 @@ export const slugify = (text: string): string => {
 // inputs article string, does normalize for case-insensitive grouping, returns normalized key
 export const normalizeArticle = (article: string): string => slugify(article.trim());
 
+// inputs CSV row, does pick the effective product identifier, returns trimmed value
+// "Артикул" is the primary model code (e.g. "54", "5А130") but accessories — кейси,
+// футляри, дрібниці — leave it empty and use the barcode in the "-" column instead.
+// Without this fallback any row without "Артикул" gets dropped at the grouping stage,
+// which is why all 79 футляр rows in the operator's CSV silently vanished from the
+// import. Barcode is per-row unique, so each accessory becomes its own product.
+export const getRowIdentifier = (r: TCsvRow): string => {
+  const art = (r['Артикул'] || '').trim();
+  if (art) return art;
+  return (r['-'] || '').trim();
+};
+
 // inputs raw "Товар" value, does strip color/variant suffix and "б/і" marker, returns trimmed base title
 // Strategy (apply in order, first match wins):
 //   1. Drop "б/і" marker so it never contaminates the key.
@@ -293,7 +305,7 @@ const inferGenderFromTitle = (
 // inputs article rows + categories map, does build full product payload, returns payload object
 export const buildProductPayload = (rows: TCsvRow[], categories: TCategoriesMap): TProductPayload => {
   const first = rows[0];
-  const article = (first['Артикул'] || '').trim();
+  const article = getRowIdentifier(first);
 
   // For the stored title we drop the "б/і" marker and any trailing colour /
   // C-code suffix. Old CSVs used "<base> C5 чорний" (code first), the current
@@ -438,7 +450,7 @@ const priceKey = (raw: string | undefined): string => {
 export const groupByArticle = (rows: TCsvRow[]): Map<string, TCsvRow[]> => {
   const map = new Map<string, TCsvRow[]>();
   for (const r of rows) {
-    const art = (r['Артикул'] || '').trim();
+    const art = getRowIdentifier(r);
     if (!art) continue;
     const catRaw = (r['Категорія'] || '').trim();
     const genderRaw = (r['Стать'] || '').trim();
