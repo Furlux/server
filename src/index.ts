@@ -102,7 +102,20 @@ const configureOrderAdminView = async (strapi: Core.Strapi) => {
 };
 
 export default {
-  register(/* { strapi }: { strapi: Core.Strapi } */) {},
+  // inputs strapi instance, does flip pluginOptions.content-manager.visible=false on users-permissions.user so it disappears from CM sidebar for everyone (incl. Super Admin), returns void
+  register({ strapi }: { strapi: Core.Strapi }) {
+    const userCT = (strapi as unknown as { contentTypes: Record<string, { pluginOptions?: Record<string, unknown> }> })
+      .contentTypes['plugin::users-permissions.user'];
+    if (userCT) {
+      userCT.pluginOptions = {
+        ...(userCT.pluginOptions ?? {}),
+        'content-manager': {
+          ...((userCT.pluginOptions?.['content-manager'] as Record<string, unknown>) ?? {}),
+          visible: false,
+        },
+      };
+    }
+  },
 
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
     await configureOrderAdminView(strapi);
