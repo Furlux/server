@@ -1,5 +1,6 @@
 type TNotifyOrder = {
   id: number;
+  documentId?: string | null;
   firstName?: string | null;
   lastName?: string | null;
   telegramUserId?: bigint | number | string | null;
@@ -13,15 +14,25 @@ type TOrderItem = { productName?: string; quantity?: number; price?: number };
 
 const BOT_TOKEN = process.env.TG_BOT_TOKEN;
 const MANAGER_CHAT_ID = process.env.MANAGER_TG_CHAT_ID;
+const BOT_USERNAME = process.env.BOT_USERNAME;
 
-// inputs chatId + html text, does POST to Telegram sendMessage API, returns void
-const sendMessage = async (chatId: string | number, text: string): Promise<void> => {
+// inputs chatId + html text + optional replyMarkup, does POST to Telegram sendMessage API, returns void
+const sendMessage = async (
+  chatId: string | number,
+  text: string,
+  replyMarkup?: object,
+): Promise<void> => {
   if (!BOT_TOKEN) return;
   try {
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: 'HTML',
+        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+      }),
     });
   } catch (err) {
     console.error('[notify] sendMessage error:', err);
@@ -42,6 +53,16 @@ const clientLink = (order: TNotifyOrder): string => {
   return order.telegramUserId
     ? `<a href="tg://user?id=${order.telegramUserId}">${name}</a>`
     : name;
+};
+
+// inputs documentId, does build inline keyboard with "view order" button, returns reply_markup object or undefined
+const orderButton = (documentId?: string | null): object | undefined => {
+  if (!BOT_USERNAME || !documentId) return undefined;
+  return {
+    inline_keyboard: [[
+      { text: '📦 Переглянути замовлення', url: `https://t.me/${BOT_USERNAME}?startapp=order_${documentId}` },
+    ]],
+  };
 };
 
 // inputs order, does send "new order" notification to manager group, returns void
@@ -76,11 +97,11 @@ const STATUS_MESSAGES: Partial<Record<string, string>> = {
   cancelled:  '❌ Ваше замовлення <b>#%id%</b> скасовано.',
 };
 
-// inputs order + new status, does send status update notification directly to customer, returns void
+// inputs order + new status, does send status update with order button directly to customer, returns void
 export const notifyCustomerStatusChanged = async (order: TNotifyOrder, status: string): Promise<void> => {
   if (!order.telegramUserId || !BOT_TOKEN) return;
   const template = STATUS_MESSAGES[status];
   if (!template) return;
   const text = template.replace('%id%', String(order.id));
-  await sendMessage(String(order.telegramUserId), text);
+  await sendMessage(String(order.telegramUserId), text, orderButton(order.documentId));
 };
