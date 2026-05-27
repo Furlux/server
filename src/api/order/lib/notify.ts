@@ -55,15 +55,6 @@ const clientLink = (order: TNotifyOrder): string => {
     : name;
 };
 
-// inputs documentId, does build inline keyboard with "view order" button, returns reply_markup object or undefined
-const orderButton = (documentId?: string | null): object | undefined => {
-  if (!BOT_USERNAME || !documentId) return undefined;
-  return {
-    inline_keyboard: [[
-      { text: '📦 Переглянути замовлення', url: `https://t.me/${BOT_USERNAME}?startapp=order_${documentId}` },
-    ]],
-  };
-};
 
 // inputs order, does send "new order" notification to manager group, returns void
 export const notifyManagerNewOrder = async (order: TNotifyOrder): Promise<void> => {
@@ -97,11 +88,11 @@ const STATUS_MESSAGES: Partial<Record<string, string>> = {
   cancelled:  '❌ Ваше замовлення <b>#%id%</b> скасовано.',
 };
 
-// inputs order + new status, does send status update with order button directly to customer, returns void
+// inputs order + new status, does send status update with order command link directly to customer, returns void
 export const notifyCustomerStatusChanged = async (order: TNotifyOrder, status: string): Promise<void> => {
   if (!order.telegramUserId || !BOT_TOKEN) return;
   const template = STATUS_MESSAGES[status];
   if (!template) return;
-  const text = template.replace('%id%', String(order.id));
-  await sendMessage(String(order.telegramUserId), text, orderButton(order.documentId));
+  const text = template.replace('%id%', String(order.id)) + `\nДеталі: /order_${order.id}`;
+  await sendMessage(String(order.telegramUserId), text);
 };
