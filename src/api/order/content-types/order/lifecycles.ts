@@ -1,3 +1,5 @@
+import { notifyManagerNewOrder, notifyCustomerStatusChanged } from '../../lib/notify';
+
 type TOrderItem = {
   productName?: string;
   quantity?: number;
@@ -37,11 +39,16 @@ const updateComputedFields = async (result: {
 export default {
   async afterCreate(event: { result: Parameters<typeof updateComputedFields>[0] }) {
     await updateComputedFields(event.result);
+    await notifyManagerNewOrder(event.result as any);
   },
 
   async afterUpdate(event: { result: Parameters<typeof updateComputedFields>[0]; params: { data?: Record<string, unknown> } }) {
     // Skip if this update was triggered by updateComputedFields itself
     if ('label' in (event.params.data ?? {}) || 'itemsSummary' in (event.params.data ?? {})) return;
     await updateComputedFields(event.result);
+    const newStatus = event.params.data?.orderStatus as string | undefined;
+    if (newStatus) {
+      await notifyCustomerStatusChanged(event.result as any, newStatus);
+    }
   },
 };

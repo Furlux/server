@@ -1,4 +1,5 @@
 import { factories } from '@strapi/strapi';
+import { notifyManagerOrderPaid } from '../lib/notify';
 
 const MONO_API_URL = 'https://api.monobank.ua/api/merchant/invoice/create';
 
@@ -114,6 +115,10 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
     });
 
     strapi.log.info(`Order ${order.documentId} status updated to "${newStatus}" via Mono webhook`);
+
+    if (status === 'success') {
+      await notifyManagerOrderPaid(order as any);
+    }
 
     type TOrderItem = { productSlug?: string | null; quantity: number };
     const items = Array.isArray(order.items) ? (order.items as TOrderItem[]) : [];
