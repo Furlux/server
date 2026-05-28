@@ -16,7 +16,7 @@ const BOT_TOKEN = process.env.TG_BOT_TOKEN;
 const MANAGER_CHAT_ID = process.env.MANAGER_TG_CHAT_ID;
 const BOT_USERNAME = process.env.BOT_USERNAME;
 
-// inputs chatId + html text + optional replyMarkup, does POST to Telegram sendMessage API, returns void
+// inputs chatId + html text + optional replyMarkup, does POST to Telegram sendMessage API with 5s timeout, returns void
 const sendMessage = async (
   chatId: string | number,
   text: string,
@@ -24,6 +24,8 @@ const sendMessage = async (
 ): Promise<void> => {
   if (!BOT_TOKEN) return;
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -33,7 +35,9 @@ const sendMessage = async (
         parse_mode: 'HTML',
         ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
   } catch (err) {
     console.error('[notify] sendMessage error:', err);
   }
