@@ -55,27 +55,27 @@ const buildItemsText = (items: unknown): string => {
     .join('\n');
 };
 
-// inputs order, does build tappable tg link or plain name, returns html string
-const clientLink = (order: TNotifyOrder): string => {
-  const name = `${order.firstName ?? ''} ${order.lastName ?? ''}`.trim() || 'Клієнт';
-  return order.telegramUserId
-    ? `<a href="tg://user?id=${order.telegramUserId}">${name}</a>`
-    : name;
-};
+// inputs order, does build full name string, returns string
+const clientName = (order: TNotifyOrder): string =>
+  `${order.firstName ?? ''} ${order.lastName ?? ''}`.trim() || 'Клієнт';
 
+// inputs telegramUserId, does build inline keyboard with tg deep link button, returns object or undefined
+const clientButton = (telegramUserId: TNotifyOrder['telegramUserId']) =>
+  telegramUserId
+    ? { inline_keyboard: [[{ text: '💬 Написати клієнту', url: `tg://user?id=${telegramUserId}` }]] }
+    : undefined;
 
 // inputs order, does send "new order" notification to manager group, returns void
 export const notifyManagerNewOrder = async (order: TNotifyOrder): Promise<void> => {
   if (!MANAGER_CHAT_ID) return;
-  console.error(`[notify] newOrder id=${order.id} telegramUserId=${JSON.stringify(order.telegramUserId)} type=${typeof order.telegramUserId}`);
   const text = [
     `🆕 <b>Нове замовлення #${order.id}</b>`,
-    `👤 ${clientLink(order)}`,
+    `👤 ${clientName(order)}`,
     `📱 ${order.phone ?? '—'}`,
     buildItemsText(order.items),
     `💰 <b>${order.totalPrice ?? 0} ${order.currency ?? 'UAH'}</b>`,
   ].filter(Boolean).join('\n');
-  await sendMessage(MANAGER_CHAT_ID, text);
+  await sendMessage(MANAGER_CHAT_ID, text, clientButton(order.telegramUserId));
 };
 
 // inputs order, does send "order paid" notification to manager group, returns void
@@ -83,11 +83,11 @@ export const notifyManagerOrderPaid = async (order: TNotifyOrder): Promise<void>
   if (!MANAGER_CHAT_ID) return;
   const text = [
     `✅ <b>Замовлення #${order.id} оплачено!</b>`,
-    `👤 ${clientLink(order)}`,
+    `👤 ${clientName(order)}`,
     `📱 ${order.phone ?? '—'}`,
     `💰 <b>${order.totalPrice ?? 0} ${order.currency ?? 'UAH'}</b>`,
   ].join('\n');
-  await sendMessage(MANAGER_CHAT_ID, text);
+  await sendMessage(MANAGER_CHAT_ID, text, clientButton(order.telegramUserId));
 };
 
 const STATUS_MESSAGES: Partial<Record<string, string>> = {
