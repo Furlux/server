@@ -67,6 +67,7 @@ const clientLink = (order: TNotifyOrder): string => {
 // inputs order, does send "new order" notification to manager group, returns void
 export const notifyManagerNewOrder = async (order: TNotifyOrder): Promise<void> => {
   if (!MANAGER_CHAT_ID) return;
+  console.error(`[notify] newOrder id=${order.id} telegramUserId=${JSON.stringify(order.telegramUserId)} type=${typeof order.telegramUserId}`);
   const text = [
     `🆕 <b>Нове замовлення #${order.id}</b>`,
     `👤 ${clientLink(order)}`,
