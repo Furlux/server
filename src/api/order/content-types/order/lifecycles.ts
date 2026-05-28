@@ -36,10 +36,15 @@ const updateComputedFields = async (result: {
   });
 };
 
+// inputs order id, does fetch full order record including telegramUserId, returns order or null
+const fetchFullOrder = (id: number) =>
+  strapi.db.query('api::order.order').findOne({ where: { id } });
+
 export default {
   async afterCreate(event: { result: Parameters<typeof updateComputedFields>[0] }) {
     await updateComputedFields(event.result);
-    await notifyManagerNewOrder(event.result as any);
+    const fullOrder = await fetchFullOrder(event.result.id);
+    await notifyManagerNewOrder((fullOrder ?? event.result) as any);
   },
 
   async afterUpdate(event: { result: Parameters<typeof updateComputedFields>[0]; params: { data?: Record<string, unknown> } }) {
@@ -48,7 +53,8 @@ export default {
     await updateComputedFields(event.result);
     const newStatus = event.params.data?.orderStatus as string | undefined;
     if (newStatus) {
-      await notifyCustomerStatusChanged(event.result as any, newStatus);
+      const fullOrder = await fetchFullOrder(event.result.id);
+      await notifyCustomerStatusChanged((fullOrder ?? event.result) as any, newStatus);
     }
   },
 };
