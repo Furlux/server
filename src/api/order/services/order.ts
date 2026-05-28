@@ -38,6 +38,7 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
       qty: item.quantity,
       sum: Math.round(item.price * item.quantity * 100),
       unit: 'шт.',
+      code: item.productSlug || item.productName,
       icon: item.imageUrl ? `${strapiUrl}${item.imageUrl}` : undefined,
     }));
 
