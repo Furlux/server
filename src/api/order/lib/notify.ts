@@ -16,6 +16,8 @@ const BOT_TOKEN = process.env.TG_BOT_TOKEN;
 const MANAGER_CHAT_ID = process.env.MANAGER_TG_CHAT_ID;
 const BOT_USERNAME = process.env.BOT_USERNAME;
 
+console.log('[notify] MANAGER_CHAT_ID =', JSON.stringify(MANAGER_CHAT_ID));
+
 // inputs chatId + html text + optional replyMarkup, does POST to Telegram sendMessage API with 5s timeout, returns void
 const sendMessage = async (
   chatId: string | number,
