@@ -26,7 +26,7 @@ const sendMessage = async (
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -38,6 +38,10 @@ const sendMessage = async (
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      console.error('[notify] Telegram API error:', res.status, JSON.stringify(body));
+    }
   } catch (err) {
     console.error('[notify] sendMessage error:', err);
   }
