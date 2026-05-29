@@ -48,12 +48,22 @@ export default {
   },
 
   async afterUpdate(event: { result: Parameters<typeof updateComputedFields>[0]; params: { data?: Record<string, unknown> } }) {
+    const dataKeys = Object.keys(event.params.data ?? {});
+    strapi.log.info(`[lifecycle] afterUpdate id=${event.result.id} keys=${JSON.stringify(dataKeys)}`);
+
     // Skip if this update was triggered by updateComputedFields itself
-    if ('label' in (event.params.data ?? {}) || 'itemsSummary' in (event.params.data ?? {})) return;
+    if ('label' in (event.params.data ?? {}) || 'itemsSummary' in (event.params.data ?? {})) {
+      strapi.log.info('[lifecycle] afterUpdate: skipped (computed fields update)');
+      return;
+    }
+
     await updateComputedFields(event.result);
     const newStatus = event.params.data?.orderStatus as string | undefined;
+    strapi.log.info(`[lifecycle] afterUpdate: newStatus=${newStatus}`);
+
     if (newStatus) {
       const fullOrder = await fetchFullOrder(event.result.id);
+      strapi.log.info(`[lifecycle] afterUpdate: telegramUserId=${(fullOrder as any)?.telegramUserId}`);
       await notifyCustomerStatusChanged((fullOrder ?? event.result) as any, newStatus);
     }
   },
