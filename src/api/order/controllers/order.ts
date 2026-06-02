@@ -2,13 +2,34 @@ import crypto from 'node:crypto';
 import { factories } from '@strapi/strapi';
 import { notifyManagerPaymentError } from '../lib/notify';
 
-// inputs raw body + X-Sign header + token, does HMAC-SHA256 verification, returns boolean
-const verifyMonoSignature = (rawBody: string, signature: string, token: string): boolean => {
-  const hmac = crypto.createHmac('sha256', token);
-  hmac.update(rawBody);
-  const computed = hmac.digest('base64');
+let cachedMonoPubKey: crypto.KeyObject | null = null;
+
+// inputs token, does fetch and cache Mono ECDSA public key, returns KeyObject
+const getMonoPubKey = async (token: string): Promise<crypto.KeyObject> => {
+  if (cachedMonoPubKey) return cachedMonoPubKey;
+  const res = await fetch('https://api.monobank.ua/api/merchant/pubkey', {
+    headers: { 'X-Token': token },
+  });
+  if (!res.ok) throw new Error(`Failed to fetch Mono pubkey: ${res.status}`);
+  const { key } = await res.json() as { key: string };
+  cachedMonoPubKey = crypto.createPublicKey({
+    key: Buffer.from(key, 'base64'),
+    format: 'der',
+    type: 'spki',
+  });
+  return cachedMonoPubKey;
+};
+
+// inputs raw body + X-Sign header + token, does ECDSA P-256 verification via Mono public key, returns boolean
+const verifyMonoSignature = async (rawBody: string, signature: string, token: string): Promise<boolean> => {
   try {
-    return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(signature));
+    const pubKey = await getMonoPubKey(token);
+    return crypto.verify(
+      'SHA256',
+      Buffer.from(rawBody),
+      { key: pubKey, dsaEncoding: 'der' },
+      Buffer.from(signature, 'base64'),
+    );
   } catch {
     return false;
   }
@@ -72,7 +93,7 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
     }
   },
 
-  // inputs ctx with Mono webhook payload, does verify signature then update order status, returns 200
+  // inputs ctx with Mono webhook payload, does verify ECDSA signature then update order status, returns 200
   async monoWebhook(ctx) {
     strapi.log.info(`Mono webhook received: ${JSON.stringify(ctx.request.body)}`);
 
@@ -95,7 +116,8 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
 
     strapi.log.info(`Mono webhook rawBody length=${rawBody.length} signature=${signature.slice(0, 10)}...`);
 
-    if (!verifyMonoSignature(rawBody, signature, token)) {
+    const isValid = await verifyMonoSignature(rawBody, signature, token);
+    if (!isValid) {
       strapi.log.warn('Mono webhook: invalid signature');
       return ctx.unauthorized('Invalid signature');
     }
