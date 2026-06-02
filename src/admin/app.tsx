@@ -15,7 +15,7 @@ export default {
     locales: [],
   },
   bootstrap(app: StrapiApp) {
-    void guardPasswordFields();
+    guardPasswordFields();
 
     app
       .getPlugin('content-manager')
