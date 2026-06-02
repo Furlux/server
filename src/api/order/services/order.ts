@@ -68,7 +68,7 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
     if (!response.ok) {
       const errorText = await response.text();
       strapi.log.error(`Mono API error: ${response.status} ${errorText}`);
-      throw new Error(`Mono API error: ${response.status}`);
+      throw new Error(`${response.status}: ${errorText}`);
     }
 
     const data = await response.json() as { pageUrl: string; invoiceId: string };
