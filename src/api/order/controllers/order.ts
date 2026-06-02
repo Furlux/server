@@ -1,4 +1,5 @@
 import { factories } from '@strapi/strapi';
+import { notifyManagerPaymentError } from '../lib/notify';
 
 export default factories.createCoreController('api::order.order', ({ strapi }) => ({
   // inputs ctx with orderDocumentId in body, does create Mono invoice and update order, returns { pageUrl, invoiceId }
@@ -31,7 +32,9 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
 
       ctx.body = { pageUrl, invoiceId };
     } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
       strapi.log.error('createPayment error:', error);
+      await notifyManagerPaymentError(order as any, errMsg).catch(() => {});
       return ctx.internalServerError('Failed to create payment');
     }
   },

@@ -36,7 +36,7 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
     const basketOrder = (order.items || []).map((item) => ({
       name: item.productName,
       qty: item.quantity,
-      sum: Math.round(item.price * item.quantity * 100),
+      sum: Math.round(item.price * 100), // unit price in kopecks; Mono calculates line total as sum * qty
       unit: 'шт.',
       code: item.productSlug || item.productName,
       icon: item.imageUrl ? `${strapiUrl}${item.imageUrl}` : undefined,

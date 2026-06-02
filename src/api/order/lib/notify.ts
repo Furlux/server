@@ -90,6 +90,19 @@ export const notifyManagerOrderPaid = async (order: TNotifyOrder): Promise<void>
   await sendMessage(MANAGER_CHAT_ID, text, clientButton(order.telegramUserId));
 };
 
+// inputs order + error text, does send payment failure alert to manager group, returns void
+export const notifyManagerPaymentError = async (order: TNotifyOrder, errorText: string): Promise<void> => {
+  if (!MANAGER_CHAT_ID) return;
+  const text = [
+    `⚠️ <b>Помилка оплати замовлення #${order.id}</b>`,
+    `👤 ${clientName(order)}`,
+    `📱 ${order.phone ?? '—'}`,
+    `💰 <b>${order.totalPrice ?? 0} ${order.currency ?? 'UAH'}</b>`,
+    `\n🔴 <code>${errorText}</code>`,
+  ].join('\n');
+  await sendMessage(MANAGER_CHAT_ID, text, clientButton(order.telegramUserId));
+};
+
 const STATUS_MESSAGES: Partial<Record<string, string>> = {
   processing: '⏳ Ваше замовлення <b>#%id%</b> прийнято і обробляється.',
   shipped:    '🚚 Ваше замовлення <b>#%id%</b> відправлено! Очікуйте доставку.',
