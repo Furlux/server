@@ -1,5 +1,6 @@
 import type { StrapiApp } from '@strapi/strapi/admin';
 import DrivePanel from './extensions/drive-import/DrivePanel';
+import { guardPasswordFields } from './extensions/guard-password-fields';
 
 const UploadIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -14,6 +15,8 @@ export default {
     locales: [],
   },
   bootstrap(app: StrapiApp) {
+    void guardPasswordFields();
+
     app
       .getPlugin('content-manager')
       .apis.addEditViewSidePanel((panels) => {
