@@ -57,6 +57,8 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
       webhookUrl: `${serverUrl}/api/orders/mono-webhook`,
     };
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     const response = await fetch(MONO_API_URL, {
       method: 'POST',
       headers: {
@@ -64,7 +66,9 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
         'X-Token': token,
       },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorText = await response.text();
