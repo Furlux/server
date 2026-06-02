@@ -100,6 +100,13 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
     }
 
     const order = orders[0];
+
+    // Idempotency: skip if already processed to prevent duplicate stock deduction and notifications
+    if ((order as any).paymentStatus === 'paid') {
+      strapi.log.info(`Mono webhook: order ${order.documentId} already paid, skipping`);
+      return;
+    }
+
     const newStatus = MONO_STATUS_MAP[status];
     const newPaymentStatus = MONO_PAYMENT_STATUS_MAP[status];
 
