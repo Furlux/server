@@ -12,27 +12,19 @@ const getMonoPubKey = async (token: string): Promise<crypto.KeyObject> => {
   });
   if (!res.ok) throw new Error(`Failed to fetch Mono pubkey: ${res.status}`);
   const { key } = await res.json() as { key: string };
-  cachedMonoPubKey = crypto.createPublicKey({
-    key: Buffer.from(key, 'base64'),
-    format: 'der',
-    type: 'spki',
-  });
+  // Mono returns the PEM public key encoded as base64; decode to PEM text, not DER
+  const pem = Buffer.from(key, 'base64').toString('utf-8');
+  cachedMonoPubKey = crypto.createPublicKey(pem);
   return cachedMonoPubKey;
 };
 
-// inputs raw body + X-Sign header + token, does ECDSA P-256 verification via Mono public key, returns boolean
+// inputs raw body + X-Sign(base64 DER) + token, does ECDSA-SHA256 verification, returns boolean
 const verifyMonoSignature = async (rawBody: string, signature: string, token: string): Promise<boolean> => {
-  try {
-    const pubKey = await getMonoPubKey(token);
-    return crypto.verify(
-      'SHA256',
-      Buffer.from(rawBody),
-      { key: pubKey, dsaEncoding: 'der' },
-      Buffer.from(signature, 'base64'),
-    );
-  } catch {
-    return false;
-  }
+  const pubKey = await getMonoPubKey(token);
+  const verifier = crypto.createVerify('SHA256');
+  verifier.update(rawBody, 'utf-8');
+  verifier.end();
+  return verifier.verify(pubKey, signature, 'base64');
 };
 
 export default factories.createCoreController('api::order.order', ({ strapi }) => ({
@@ -116,7 +108,12 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
 
     strapi.log.info(`Mono webhook rawBody length=${rawBody.length} signature=${signature.slice(0, 10)}...`);
 
-    const isValid = await verifyMonoSignature(rawBody, signature, token);
+    let isValid = false;
+    try {
+      isValid = await verifyMonoSignature(rawBody, signature, token);
+    } catch (e) {
+      strapi.log.error(`Mono webhook: signature verify threw: ${e instanceof Error ? e.message : String(e)}`);
+    }
     if (!isValid) {
       strapi.log.warn('Mono webhook: invalid signature');
       return ctx.unauthorized('Invalid signature');
