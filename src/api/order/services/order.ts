@@ -29,8 +29,6 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
     const serverUrl = strapi.config.get('server.url') || process.env.SERVER_URL || 'http://localhost:1337';
     const botUsername = process.env.BOT_USERNAME;
 
-    const amount = Math.round(order.totalPrice * 100);
-
     const strapiUrl = process.env.STRAPI_URL || serverUrl;
 
     const basketOrder = (order.items || []).map((item) => ({
@@ -41,6 +39,9 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
       code: item.productSlug || item.productName,
       icon: item.imageUrl ? `${strapiUrl}${item.imageUrl}` : undefined,
     }));
+
+    // Derive amount from basket to avoid rounding mismatch: Mono validates Σ(sum * qty) == amount
+    const amount = basketOrder.reduce((acc, item) => acc + item.sum * item.qty, 0);
 
     const payload = {
       amount,
