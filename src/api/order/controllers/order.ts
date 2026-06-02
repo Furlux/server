@@ -35,6 +35,26 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       return ctx.badRequest(`Order status is "${(order as any).orderStatus}", expected "pending"`);
     }
 
+    // Idempotency: if invoice already exists, fetch its page URL from Mono instead of creating a new one
+    const existingInvoiceId = (order as any).monoInvoiceId as string | null | undefined;
+    if (existingInvoiceId) {
+      try {
+        const token = process.env.PLATA_BY_MONO_TOKEN!;
+        const res = await fetch(`https://api.monobank.ua/api/merchant/invoice/status?invoiceId=${existingInvoiceId}`, {
+          headers: { 'X-Token': token },
+        });
+        if (res.ok) {
+          const data = await res.json() as { status: string; pageUrl?: string };
+          if (data.pageUrl && data.status !== 'expired' && data.status !== 'failure') {
+            ctx.body = { pageUrl: data.pageUrl, invoiceId: existingInvoiceId };
+            return;
+          }
+        }
+      } catch {
+        // invoice lookup failed — fall through to create a new one
+      }
+    }
+
     try {
       const { pageUrl, invoiceId } = await (strapi.service('api::order.order') as any).createMonoInvoice(order);
 
