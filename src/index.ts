@@ -1,4 +1,5 @@
 import type { Core } from '@strapi/strapi';
+import { errors } from '@strapi/utils';
 import { startCleanupInterval } from './api/csv-migration/lib/job-state';
 
 const ORDER_UID = 'api::order.order';
@@ -101,6 +102,33 @@ const configureOrderAdminView = async (strapi: Core.Strapi) => {
   await pluginStore.set({ key: CM_KEY, value });
 };
 
+// matches PUT /admin/users/:id (numeric id) but NOT /admin/users/me (self-profile) nor reset/register flows
+const ADMIN_USER_UPDATE_PATH = /^\/admin\/users\/\d+$/;
+
+// inputs strapi, does block admin-user password changes for non-super-admins via an admin::user db lifecycle, returns void
+// Strapi has no granular "change password" permission (it is bundled into admin::users.update), so the only safe
+// enforcement point is the persistence layer, scoped by the live request ctx to the Users management endpoint.
+const guardAdminPasswordChanges = (strapi: Core.Strapi) => {
+  strapi.db.lifecycles.subscribe({
+    models: ['admin::user'],
+    beforeUpdate(event) {
+      const data = (event.params as { data?: Record<string, unknown> }).data;
+      if (!data || !('password' in data)) return; // not a password change
+
+      const ctx = strapi.requestContext.get();
+      if (!ctx) return; // CLI / programmatic update (admin:reset, seeds) - allowed
+
+      const path = ctx.request?.path ?? '';
+      if (ctx.method !== 'PUT' || !ADMIN_USER_UPDATE_PATH.test(path)) return; // not the Users mgmt endpoint (skips /me, reset)
+
+      const roleService = strapi.service('admin::role') as { hasSuperAdminRole: (user: unknown) => boolean };
+      if (!roleService.hasSuperAdminRole(ctx.state?.user)) {
+        throw new errors.ForbiddenError('Only a Super Admin can change an admin user password');
+      }
+    },
+  });
+};
+
 export default {
   // inputs strapi instance, does flip pluginOptions.content-manager.visible=false on users-permissions.user so it disappears from CM sidebar for everyone (incl. Super Admin), returns void
   register({ strapi }: { strapi: Core.Strapi }) {
@@ -118,6 +146,8 @@ export default {
   },
 
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
+    guardAdminPasswordChanges(strapi);
+
     await configureOrderAdminView(strapi);
 
     const count = await backfillOrders(strapi);
