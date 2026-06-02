@@ -29,6 +29,7 @@ export default [
       jsonLimit: '20mb',
       formLimit: '20mb',
       textLimit: '20mb',
+      includeUnparsed: true,
     },
   },
   'strapi::session',

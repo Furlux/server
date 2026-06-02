@@ -74,6 +74,8 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
 
   // inputs ctx with Mono webhook payload, does verify signature then update order status, returns 200
   async monoWebhook(ctx) {
+    strapi.log.info(`Mono webhook received: ${JSON.stringify(ctx.request.body)}`);
+
     const token = process.env.PLATA_BY_MONO_TOKEN;
     if (!token) {
       strapi.log.error('Mono webhook: PLATA_BY_MONO_TOKEN not configured');
@@ -86,7 +88,13 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
       return ctx.unauthorized('Missing signature');
     }
 
-    const rawBody = (ctx.request as any).rawBody ?? JSON.stringify(ctx.request.body);
+    const rawBody: string =
+      (ctx.request as any).rawBody
+      ?? (ctx.request.body as any)[Symbol.for('unparsedBody')]
+      ?? JSON.stringify(ctx.request.body);
+
+    strapi.log.info(`Mono webhook rawBody length=${rawBody.length} signature=${signature.slice(0, 10)}...`);
+
     if (!verifyMonoSignature(rawBody, signature, token)) {
       strapi.log.warn('Mono webhook: invalid signature');
       return ctx.unauthorized('Invalid signature');
