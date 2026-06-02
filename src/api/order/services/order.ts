@@ -57,6 +57,8 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
       webhookUrl: `${serverUrl}/api/orders/mono-webhook`,
     };
 
+    strapi.log.info(`Mono invoice for order ${order.id}: amount=${amount} webhookUrl=${payload.webhookUrl}`);
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     const response = await fetch(MONO_API_URL, {
