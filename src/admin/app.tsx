@@ -1,5 +1,6 @@
 import type { StrapiApp } from '@strapi/strapi/admin';
 import DrivePanel from './extensions/drive-import/DrivePanel';
+import OrderPrintPanel from './extensions/order-print/OrderPrintPanel';
 import { guardPasswordFields } from './extensions/guard-password-fields';
 
 const UploadIcon = () => (
@@ -30,6 +31,19 @@ export default {
                 <DrivePanel
                   documentId={context.documentId ?? ''}
                   onDone={() => window.location.reload()}
+                />
+              ),
+            };
+          },
+          (context: { model: string; documentId?: string; document?: { id?: number } }) => {
+            if (context.model !== 'api::order.order') return null;
+            if (!context.documentId) return null;
+            return {
+              title: 'Друк',
+              content: (
+                <OrderPrintPanel
+                  documentId={context.documentId}
+                  orderId={context.document?.id}
                 />
               ),
             };

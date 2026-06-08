@@ -16,5 +16,15 @@ export default {
         auth: false,
       },
     },
+    {
+      // auth:false skips users-permissions; is-admin policy then requires a valid admin session token
+      method: 'GET',
+      path: '/orders/:id/pdf',
+      handler: 'order.printPdf',
+      config: {
+        auth: false,
+        policies: ['global::is-admin'],
+      },
+    },
   ],
 };

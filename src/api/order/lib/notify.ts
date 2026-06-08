@@ -1,3 +1,5 @@
+import { buildItemsText, clientName } from './order-summary';
+
 type TNotifyOrder = {
   id: number;
   documentId?: string | null;
@@ -9,8 +11,6 @@ type TNotifyOrder = {
   items?: unknown;
   phone?: string | null;
 };
-
-type TOrderItem = { productName?: string; quantity?: number; price?: number };
 
 const BOT_TOKEN = process.env.TG_BOT_TOKEN;
 const MANAGER_CHAT_ID = '-1003985153085';
@@ -46,18 +46,6 @@ const sendMessage = async (
     console.error('[notify] sendMessage error:', err);
   }
 };
-
-// inputs items JSON, does format to bullet list, returns string
-const buildItemsText = (items: unknown): string => {
-  if (!Array.isArray(items) || items.length === 0) return '';
-  return '\n' + (items as TOrderItem[])
-    .map((i) => `• ${i.quantity ?? 1}x ${i.productName ?? 'Товар'} — ${i.price ?? 0} UAH`)
-    .join('\n');
-};
-
-// inputs order, does build full name string, returns string
-const clientName = (order: TNotifyOrder): string =>
-  `${order.firstName ?? ''} ${order.lastName ?? ''}`.trim() || 'Клієнт';
 
 // inputs telegramUserId, does build inline keyboard with tg deep link button, returns object or undefined
 const clientButton = (telegramUserId: TNotifyOrder['telegramUserId']) =>
