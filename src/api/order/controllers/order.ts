@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 import { factories } from '@strapi/strapi';
 import { notifyManagerPaymentError } from '../lib/notify';
+import { buildOrderSummary, type TOrderLike } from '../lib/order-summary';
+import { buildOrderPdf } from '../lib/order-pdf';
 
 let cachedMonoPubKey: crypto.KeyObject | null = null;
 
@@ -28,6 +30,30 @@ const verifyMonoSignature = async (rawBody: string, signature: string, token: st
 };
 
 export default factories.createCoreController('api::order.order', ({ strapi }) => ({
+  // inputs ctx with order documentId in params, does render the order as a PDF (admin-only route), returns PDF body
+  async printPdf(ctx) {
+    const { id } = ctx.params as { id?: string };
+    if (!id) {
+      return ctx.badRequest('id is required');
+    }
+
+    const order = await strapi.documents('api::order.order').findOne({ documentId: id });
+    if (!order) {
+      return ctx.notFound('Order not found');
+    }
+
+    try {
+      const buffer = await buildOrderPdf(buildOrderSummary(order as unknown as TOrderLike));
+      const fileId = (order as { id?: number | string }).id ?? id;
+      ctx.set('Content-Type', 'application/pdf');
+      ctx.set('Content-Disposition', `attachment; filename="order-${fileId}.pdf"`);
+      ctx.body = buffer;
+    } catch (error) {
+      strapi.log.error('printPdf error:', error);
+      return ctx.internalServerError('Failed to generate PDF');
+    }
+  },
+
   // inputs ctx with orderDocumentId in body, does create Mono invoice and update order, returns { pageUrl, invoiceId }
   async createPayment(ctx) {
     const { orderDocumentId } = ctx.request.body as { orderDocumentId?: string };
