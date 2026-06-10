@@ -15,7 +15,7 @@ const OrderPrintPanel: React.FC<TProps> = ({ documentId, orderId }) => {
   const handlePrint = async () => {
     setError(null);
     if (!token) {
-      setError('Сесія адміністратора недоступна. Оновіть сторінку та увійдіть знову.');
+      setError('Admin session unavailable. Refresh the page and sign in again.');
       return;
     }
     setIsBusy(true);
@@ -27,7 +27,7 @@ const OrderPrintPanel: React.FC<TProps> = ({ documentId, orderId }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
-        throw new Error(`Сервер повернув ${res.status}`);
+        throw new Error(`Server returned ${res.status}`);
       }
 
       const blob = await res.blob();
@@ -44,7 +44,7 @@ const OrderPrintPanel: React.FC<TProps> = ({ documentId, orderId }) => {
       }
     } catch (err: unknown) {
       const e = err as { message?: string };
-      setError(e.message ?? 'Не вдалося згенерувати PDF');
+      setError(e.message ?? 'Failed to generate PDF');
     } finally {
       setIsBusy(false);
     }
@@ -53,7 +53,7 @@ const OrderPrintPanel: React.FC<TProps> = ({ documentId, orderId }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <p style={{ fontSize: '12px', color: '#666', margin: 0 }}>
-        PDF замовлення: товари, сума, клієнт - той самий вміст, що йде в Telegram, плюс місто й адреса доставки.
+        Order PDF: items, total, client - the same content sent to Telegram, plus delivery city and address.
       </p>
       <button
         type="button"
@@ -70,7 +70,7 @@ const OrderPrintPanel: React.FC<TProps> = ({ documentId, orderId }) => {
           fontWeight: 600,
         }}
       >
-        {isBusy ? 'Формування...' : 'Друкувати PDF'}
+        {isBusy ? 'Generating...' : 'Print PDF'}
       </button>
       {error ? <p style={{ fontSize: '12px', color: '#d02b20', margin: 0 }}>{error}</p> : null}
     </div>

@@ -39,7 +39,7 @@ export default {
             if (context.model !== 'api::order.order') return null;
             if (!context.documentId) return null;
             return {
-              title: 'Друк',
+              title: 'Print',
               content: (
                 <OrderPrintPanel
                   documentId={context.documentId}
