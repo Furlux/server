@@ -44,22 +44,22 @@ export type TOrderSummary = {
 const DEFAULT_CURRENCY = 'UAH';
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
-  pending: 'Очікується',
-  processing: 'В обробці',
-  shipped: 'Відправлено',
-  delivered: 'Доставлено',
-  cancelled: 'Скасовано',
+  pending: 'Pending',
+  processing: 'Processing',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
 };
 
 const PAYMENT_STATUS_LABELS: Record<string, string> = {
-  pending: 'Очікує оплати',
-  paid: 'Оплачено',
-  failed: 'Оплата не пройшла',
+  pending: 'Awaiting payment',
+  paid: 'Paid',
+  failed: 'Payment failed',
 };
 
 const DELIVERY_LABELS: Record<string, string> = {
-  'nova-poshta-warehouse': 'Нова Пошта (відділення)',
-  'nova-poshta-address': 'Нова Пошта (адресна доставка)',
+  'nova-poshta-warehouse': 'Nova Poshta (branch)',
+  'nova-poshta-address': 'Nova Poshta (address delivery)',
 };
 
 // inputs unknown value, does coerce to a finite number, returns number or fallback
@@ -69,9 +69,10 @@ const toNumber = (value: unknown, fallback = 0): number =>
 // inputs items JSON, does narrow to array, returns TOrderItem[]
 const toItems = (items: unknown): TOrderItem[] => (Array.isArray(items) ? (items as TOrderItem[]) : []);
 
-// inputs order, does build full name, returns name or "Клієнт" fallback (shared by Telegram + PDF)
-export const clientName = (order: Pick<TOrderLike, 'firstName' | 'lastName'>): string =>
-  `${order.firstName ?? ''} ${order.lastName ?? ''}`.trim() || 'Клієнт';
+// inputs order + optional fallback, does build full name, returns name or fallback. Telegram keeps the
+// "Клієнт" default; the PDF passes "Client" via {@link buildOrderSummary}.
+export const clientName = (order: Pick<TOrderLike, 'firstName' | 'lastName'>, fallback = 'Клієнт'): string =>
+  `${order.firstName ?? ''} ${order.lastName ?? ''}`.trim() || fallback;
 
 // inputs item, does format one Telegram bullet line, returns string. Em-dash kept to preserve the existing manager-group message format.
 export const formatItemLine = (item: TOrderItem): string =>
@@ -84,11 +85,11 @@ export const buildItemsText = (items: unknown): string => {
   return '\n' + list.map(formatItemLine).join('\n');
 };
 
-// inputs order, does compose the Ukrainian delivery label with warehouse/street detail, returns string
+// inputs order, does compose the English delivery label with warehouse/street detail, returns string
 const deliveryLabel = (order: TOrderLike): string => {
   const base = DELIVERY_LABELS[order.deliveryMethod ?? ''] ?? (order.deliveryMethod ?? '');
   if (order.deliveryMethod === 'nova-poshta-warehouse' && order.warehouseNumber) {
-    return `${base}, №${order.warehouseNumber}`;
+    return `${base}, No.${order.warehouseNumber}`;
   }
   if (order.deliveryMethod === 'nova-poshta-address' && order.streetAddress) {
     return `${base}, ${order.streetAddress}`;
@@ -111,11 +112,11 @@ export const buildOrderSummary = (order: TOrderLike): TOrderSummary => {
   const items = toItems(order.items).map((item) => {
     const quantity = toNumber(item.quantity, 1);
     const price = toNumber(item.price);
-    return { quantity, productName: item.productName ?? 'Товар', price, sum: quantity * price };
+    return { quantity, productName: item.productName ?? 'Product', price, sum: quantity * price };
   });
   return {
     orderNumber: `#${order.id ?? ''}`,
-    clientName: clientName(order),
+    clientName: clientName(order, 'Client'),
     phone: order.phone ?? '-',
     email: order.email ?? '',
     city: order.city ?? '',

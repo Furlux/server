@@ -4,8 +4,8 @@ import type { TOrderSummary } from './order-summary';
 // pdfmake 0.3 server singleton. No bundled type declarations, hence require (same pattern as heic-convert).
 const pdfmake = require('pdfmake');
 
-// Roboto ships with pdfmake and covers Ukrainian Cyrillic (і ї є ґ, №). Resolved from the installed
-// package so it works in both `strapi develop` (src) and production (dist) without copying assets.
+// Roboto ships with pdfmake. Resolved from the installed package so it works in both
+// `strapi develop` (src) and production (dist) without copying assets.
 const FONTS_DIR = path.join(path.dirname(require.resolve('pdfmake/package.json')), 'fonts', 'Roboto');
 
 const ACCENT = '#4945ff';
@@ -53,10 +53,10 @@ const buildDocDefinition = (s: TOrderSummary) => {
 
   const tableBody = [
     [
-      { text: 'Товар', bold: true },
-      { text: 'К-сть', bold: true, alignment: 'right' },
-      { text: 'Ціна', bold: true, alignment: 'right' },
-      { text: 'Сума', bold: true, alignment: 'right' },
+      { text: 'Item', bold: true },
+      { text: 'Qty', bold: true, alignment: 'right' },
+      { text: 'Price', bold: true, alignment: 'right' },
+      { text: 'Subtotal', bold: true, alignment: 'right' },
     ],
     ...itemRows,
   ];
@@ -65,25 +65,25 @@ const buildDocDefinition = (s: TOrderSummary) => {
     pageSize: 'A4',
     pageMargins: [40, 40, 40, 40] as Margin,
     content: [
-      { text: `Замовлення ${s.orderNumber}`, fontSize: 20, bold: true, color: ACCENT },
+      { text: `Order ${s.orderNumber}`, fontSize: 20, bold: true, color: ACCENT },
       s.createdAtText ? { text: s.createdAtText, color: MUTED, margin: [0, 2, 0, 0] as Margin } : null,
 
-      { text: 'Клієнт', fontSize: 13, bold: true, margin: [0, 14, 0, 4] as Margin },
-      infoRow("Ім'я:", s.clientName),
-      infoRow('Телефон:', s.phone),
+      { text: 'Customer', fontSize: 13, bold: true, margin: [0, 14, 0, 4] as Margin },
+      infoRow('Name:', s.clientName),
+      infoRow('Phone:', s.phone),
       infoRow('Email:', s.email),
 
-      { text: 'Доставка', fontSize: 13, bold: true, margin: [0, 12, 0, 4] as Margin },
-      infoRow('Місто:', s.city),
-      infoRow('Спосіб:', s.deliveryLabel),
+      { text: 'Delivery', fontSize: 13, bold: true, margin: [0, 12, 0, 4] as Margin },
+      infoRow('City:', s.city),
+      infoRow('Method:', s.deliveryLabel),
 
-      { text: 'Товари', fontSize: 13, bold: true, margin: [0, 12, 0, 4] as Margin },
+      { text: 'Items', fontSize: 13, bold: true, margin: [0, 12, 0, 4] as Margin },
       {
         table: { headerRows: 1, widths: ['*', 'auto', 'auto', 'auto'], body: tableBody },
         layout: 'lightHorizontalLines',
       },
       {
-        text: `Разом: ${s.total} ${s.currency}`,
+        text: `Total: ${s.total} ${s.currency}`,
         fontSize: 14,
         bold: true,
         alignment: 'right',
@@ -91,12 +91,12 @@ const buildDocDefinition = (s: TOrderSummary) => {
       },
 
       s.orderStatusLabel || s.paymentStatusLabel
-        ? { text: 'Статус', fontSize: 13, bold: true, margin: [0, 12, 0, 4] as Margin }
+        ? { text: 'Status', fontSize: 13, bold: true, margin: [0, 12, 0, 4] as Margin }
         : null,
-      infoRow('Замовлення:', s.orderStatusLabel),
-      infoRow('Оплата:', s.paymentStatusLabel),
+      infoRow('Order:', s.orderStatusLabel),
+      infoRow('Payment:', s.paymentStatusLabel),
 
-      s.comment ? { text: 'Коментар', fontSize: 13, bold: true, margin: [0, 12, 0, 4] as Margin } : null,
+      s.comment ? { text: 'Comment', fontSize: 13, bold: true, margin: [0, 12, 0, 4] as Margin } : null,
       s.comment ? { text: s.comment } : null,
     ].filter(Boolean),
     defaultStyle: { font: 'Roboto', fontSize: 11 },
