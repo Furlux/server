@@ -2,7 +2,7 @@
 // (via {@link buildItemsText} and {@link clientName}) and the admin PDF (via
 // {@link buildOrderSummary}). Pure module - no env, no strapi, no Node APIs.
 
-export type TOrderItem = { productName?: string | null; quantity?: number | null; price?: number | null };
+export type TOrderItem = { productName?: string | null; quantity?: number | null; price?: number | null; variantCode?: string | null; variantLabel?: string | null };
 
 export type TOrderLike = {
   id?: number | string | null;
@@ -23,7 +23,7 @@ export type TOrderLike = {
   createdAt?: string | Date | null;
 };
 
-export type TOrderSummaryItem = { quantity: number; productName: string; price: number; sum: number };
+export type TOrderSummaryItem = { quantity: number; productName: string; variant: string; price: number; sum: number };
 
 export type TOrderSummary = {
   orderNumber: string;
@@ -74,9 +74,12 @@ const toItems = (items: unknown): TOrderItem[] => (Array.isArray(items) ? (items
 export const clientName = (order: Pick<TOrderLike, 'firstName' | 'lastName'>, fallback = 'Клієнт'): string =>
   `${order.firstName ?? ''} ${order.lastName ?? ''}`.trim() || fallback;
 
-// inputs item, does format one Telegram bullet line, returns string. Em-dash kept to preserve the existing manager-group message format.
-export const formatItemLine = (item: TOrderItem): string =>
-  `• ${item.quantity ?? 1}x ${item.productName ?? 'Товар'} — ${item.price ?? 0} UAH`;
+// inputs item, does format one Telegram bullet line (with colour/variant), returns string. Em-dash kept to preserve the existing manager-group message format.
+export const formatItemLine = (item: TOrderItem): string => {
+  const variant = item.variantLabel ?? item.variantCode;
+  const name = variant ? `${item.productName ?? 'Товар'} (${variant})` : (item.productName ?? 'Товар');
+  return `• ${item.quantity ?? 1}x ${name} — ${item.price ?? 0} UAH`;
+};
 
 // inputs items JSON, does format the Telegram bullet list with a leading newline, returns string ('' when empty)
 export const buildItemsText = (items: unknown): string => {
@@ -112,7 +115,8 @@ export const buildOrderSummary = (order: TOrderLike): TOrderSummary => {
   const items = toItems(order.items).map((item) => {
     const quantity = toNumber(item.quantity, 1);
     const price = toNumber(item.price);
-    return { quantity, productName: item.productName ?? 'Product', price, sum: quantity * price };
+    const variant = item.variantLabel ?? item.variantCode ?? '';
+    return { quantity, productName: item.productName ?? 'Product', variant, price, sum: quantity * price };
   });
   return {
     orderNumber: `#${order.id ?? ''}`,

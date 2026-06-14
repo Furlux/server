@@ -45,7 +45,9 @@ const infoRow = (label: string, value: string) =>
 // inputs order summary, does build the pdfmake document definition, returns docDefinition
 const buildDocDefinition = (s: TOrderSummary) => {
   const itemRows = s.items.map((item) => [
-    item.productName,
+    item.variant
+      ? { stack: [{ text: item.productName }, { text: item.variant, fontSize: 9, color: MUTED }] }
+      : item.productName,
     { text: String(item.quantity), alignment: 'right' },
     { text: `${item.price} ${s.currency}`, alignment: 'right' },
     { text: `${item.sum} ${s.currency}`, alignment: 'right' },

@@ -4,15 +4,19 @@ type TOrderItem = {
   productName?: string;
   quantity?: number;
   price?: number;
+  variantCode?: string | null;
+  variantLabel?: string | null;
 };
 
-// inputs items JSON array, does format to human-readable string, returns string
+// inputs items JSON array, does format to human-readable string (with colour/variant), returns string
 const buildItemsSummary = (items: unknown): string => {
   if (!Array.isArray(items) || items.length === 0) return '—';
 
   return (items as TOrderItem[])
     .map((item) => {
-      const name = item.productName ?? 'Товар';
+      const baseName = item.productName ?? 'Товар';
+      const variant = item.variantLabel ?? item.variantCode;
+      const name = variant ? `${baseName} (${variant})` : baseName;
       const qty = item.quantity ?? 1;
       const price = item.price != null ? ` — ${item.price}` : '';
       return `• ${qty}x ${name}${price}`;
