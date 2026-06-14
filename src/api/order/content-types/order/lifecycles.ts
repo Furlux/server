@@ -1,4 +1,5 @@
 import { notifyManagerNewOrder, notifyCustomerStatusChanged } from '../../lib/notify';
+import { variantText } from '../../lib/order-summary';
 
 type TOrderItem = {
   productName?: string;
@@ -15,8 +16,8 @@ const buildItemsSummary = (items: unknown): string => {
   return (items as TOrderItem[])
     .map((item) => {
       const baseName = item.productName ?? 'Товар';
-      const variant = item.variantLabel ?? item.variantCode;
-      const name = variant ? `${baseName} (${variant})` : baseName;
+      const variant = variantText(item);
+      const name = variant ? `${baseName} · ${variant}` : baseName;
       const qty = item.quantity ?? 1;
       const price = item.price != null ? ` — ${item.price}` : '';
       return `• ${qty}x ${name}${price}`;
