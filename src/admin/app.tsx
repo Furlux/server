@@ -1,6 +1,7 @@
 import type { StrapiApp } from '@strapi/strapi/admin';
 import DrivePanel from './extensions/drive-import/DrivePanel';
 import OrderPrintPanel from './extensions/order-print/OrderPrintPanel';
+import OrderPaymentPanel from './extensions/order-payment/OrderPaymentPanel';
 import { guardPasswordFields } from './extensions/guard-password-fields';
 
 const UploadIcon = () => (
@@ -46,6 +47,14 @@ export default {
                   orderId={context.document?.id}
                 />
               ),
+            };
+          },
+          (context: { model: string; documentId?: string }) => {
+            if (context.model !== 'api::order.order') return null;
+            if (!context.documentId) return null;
+            return {
+              title: 'Оплата',
+              content: <OrderPaymentPanel documentId={context.documentId} />,
             };
           },
         ];

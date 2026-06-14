@@ -17,11 +17,13 @@ export default {
       },
     },
     {
+      // auth:false skips users-permissions; is-admin policy then requires a valid admin session token
       method: 'POST',
       path: '/orders/check-payment',
       handler: 'order.checkPayment',
       config: {
         auth: false,
+        policies: ['global::is-admin'],
       },
     },
     {
