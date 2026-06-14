@@ -111,6 +111,25 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
     }
   },
 
+  // inputs ctx with orderDocumentId, does reconcile payment status against Mono (heals missed webhooks), returns status summary
+  async checkPayment(ctx) {
+    const { orderDocumentId } = ctx.request.body as { orderDocumentId?: string };
+
+    if (!orderDocumentId) {
+      return ctx.badRequest('orderDocumentId is required');
+    }
+
+    const order = await strapi.documents('api::order.order').findOne({
+      documentId: orderDocumentId,
+    });
+
+    if (!order) {
+      return ctx.notFound('Order not found');
+    }
+
+    ctx.body = await (strapi.service('api::order.order') as any).reconcileOrderPayment(order);
+  },
+
   // inputs ctx with Mono webhook payload, does verify ECDSA signature then update order status, returns 200
   async monoWebhook(ctx) {
     strapi.log.info(`Mono webhook received: ${JSON.stringify(ctx.request.body)}`);

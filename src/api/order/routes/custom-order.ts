@@ -17,6 +17,14 @@ export default {
       },
     },
     {
+      method: 'POST',
+      path: '/orders/check-payment',
+      handler: 'order.checkPayment',
+      config: {
+        auth: false,
+      },
+    },
+    {
       // auth:false skips users-permissions; is-admin policy then requires a valid admin session token
       method: 'GET',
       path: '/orders/:id/pdf',

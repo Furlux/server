@@ -160,4 +160,49 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
       }
     }
   },
+
+  // inputs order, does fetch real invoice status from Mono and apply it via the webhook handler, returns summary
+  async reconcileOrderPayment(order) {
+    const token = process.env.PLATA_BY_MONO_TOKEN;
+    const invoiceId = (order as any).monoInvoiceId as string | null | undefined;
+
+    if (!invoiceId) {
+      return { reconciled: false, reason: 'no-invoice', paymentStatus: (order as any).paymentStatus };
+    }
+    if (!token) {
+      strapi.log.error('reconcileOrderPayment: PLATA_BY_MONO_TOKEN not configured');
+      return { reconciled: false, reason: 'not-configured', paymentStatus: (order as any).paymentStatus };
+    }
+
+    let monoStatus: string;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(`https://api.monobank.ua/api/merchant/invoice/status?invoiceId=${invoiceId}`, {
+        headers: { 'X-Token': token },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (!res.ok) {
+        strapi.log.warn(`reconcileOrderPayment: Mono status ${res.status} for invoice ${invoiceId}`);
+        return { reconciled: false, reason: 'mono-error', paymentStatus: (order as any).paymentStatus };
+      }
+      const data = await res.json() as { status: string };
+      monoStatus = data.status;
+    } catch (e) {
+      strapi.log.error(`reconcileOrderPayment: error for invoice ${invoiceId}: ${e instanceof Error ? e.message : String(e)}`);
+      return { reconciled: false, reason: 'exception', paymentStatus: (order as any).paymentStatus };
+    }
+
+    // Apply via the same path as the live webhook (idempotent; handles status mapping, manager notify, stock)
+    await (strapi.service('api::order.order') as any).handleMonoWebhook({ invoiceId, status: monoStatus });
+
+    const updated = await strapi.documents('api::order.order').findOne({ documentId: order.documentId });
+    return {
+      reconciled: true,
+      monoStatus,
+      paymentStatus: (updated as any)?.paymentStatus ?? (order as any).paymentStatus,
+      orderStatus: (updated as any)?.orderStatus ?? (order as any).orderStatus,
+    };
+  },
 }));
