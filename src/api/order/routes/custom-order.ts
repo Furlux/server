@@ -36,5 +36,15 @@ export default {
         policies: ['global::is-admin'],
       },
     },
+    {
+      // auth:false skips users-permissions; is-admin policy then requires a valid admin session token
+      method: 'GET',
+      path: '/orders/:id/excel',
+      handler: 'order.exportExcel',
+      config: {
+        auth: false,
+        policies: ['global::is-admin'],
+      },
+    },
   ],
 };

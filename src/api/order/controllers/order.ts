@@ -3,6 +3,7 @@ import { factories } from '@strapi/strapi';
 import { notifyManagerPaymentError } from '../lib/notify';
 import { buildOrderSummary, type TOrderLike } from '../lib/order-summary';
 import { buildOrderPdf } from '../lib/order-pdf';
+import { buildOrderExcel } from '../lib/order-excel';
 
 let cachedMonoPubKey: crypto.KeyObject | null = null;
 
@@ -51,6 +52,30 @@ export default factories.createCoreController('api::order.order', ({ strapi }) =
     } catch (error) {
       strapi.log.error('printPdf error:', error);
       return ctx.internalServerError('Failed to generate PDF');
+    }
+  },
+
+  // inputs ctx with order documentId in params, does render the order as an .xlsx (admin-only route), returns Excel body
+  async exportExcel(ctx) {
+    const { id } = ctx.params as { id?: string };
+    if (!id) {
+      return ctx.badRequest('id is required');
+    }
+
+    const order = await strapi.documents('api::order.order').findOne({ documentId: id });
+    if (!order) {
+      return ctx.notFound('Order not found');
+    }
+
+    try {
+      const buffer = await buildOrderExcel(buildOrderSummary(order as unknown as TOrderLike));
+      const fileId = (order as { id?: number | string }).id ?? id;
+      ctx.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      ctx.set('Content-Disposition', `attachment; filename="order-${fileId}.xlsx"`);
+      ctx.body = buffer;
+    } catch (error) {
+      strapi.log.error('exportExcel error:', error);
+      return ctx.internalServerError('Failed to generate Excel');
     }
   },
 

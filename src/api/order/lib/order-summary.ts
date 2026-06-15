@@ -44,9 +44,10 @@ export type TOrderSummary = {
 const DEFAULT_CURRENCY = 'UAH';
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
-  pending: 'Pending',
-  processing: 'Processing',
-  shipped: 'Shipped',
+  pending: 'Pending review',
+  approved: 'Approved',
+  assembling: 'Assembling',
+  shipping: 'Shipping',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
 };
