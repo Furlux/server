@@ -91,9 +91,32 @@ export const notifyManagerPaymentError = async (order: TNotifyOrder, errorText: 
   await sendMessage(MANAGER_CHAT_ID, text, clientButton(order.telegramUserId));
 };
 
+// inputs order, does send "order received, manager will contact" DM to customer, returns void
+export const notifyCustomerOrderReceived = async (order: TNotifyOrder): Promise<void> => {
+  if (!order.telegramUserId || !BOT_TOKEN) return;
+  const text = [
+    `🧾 <b>Замовлення #${order.id} прийнято!</b>`,
+    `Менеджер перевірить наявність товарів і найближчим часом зв'яжеться з вами для підтвердження та оплати.`,
+    `\nДеталі: /order_${order.id}`,
+  ].join('\n');
+  await sendMessage(String(order.telegramUserId), text);
+};
+
+// inputs order, does send "payment received" DM to customer, returns void
+export const notifyCustomerPaymentPaid = async (order: TNotifyOrder): Promise<void> => {
+  if (!order.telegramUserId || !BOT_TOKEN) return;
+  const text = [
+    `💳 <b>Оплату за замовлення #${order.id} отримано!</b>`,
+    `Дякуємо. Ми повідомимо вас про подальші статуси.`,
+    `\nДеталі: /order_${order.id}`,
+  ].join('\n');
+  await sendMessage(String(order.telegramUserId), text);
+};
+
 const STATUS_MESSAGES: Partial<Record<string, string>> = {
-  processing: '⏳ Ваше замовлення <b>#%id%</b> прийнято і обробляється.',
-  shipped:    '🚚 Ваше замовлення <b>#%id%</b> відправлено! Очікуйте доставку.',
+  approved:   '👍 Ваше замовлення <b>#%id%</b> підтверджено менеджером.',
+  assembling: '📦 Ваше замовлення <b>#%id%</b> збирається.',
+  shipping:   '🚚 Ваше замовлення <b>#%id%</b> передано на доставку.',
   delivered:  '✅ Ваше замовлення <b>#%id%</b> доставлено. Дякуємо за покупку!',
   cancelled:  '❌ Ваше замовлення <b>#%id%</b> скасовано.',
 };

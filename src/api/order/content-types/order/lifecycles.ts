@@ -1,4 +1,9 @@
-import { notifyManagerNewOrder, notifyCustomerStatusChanged } from '../../lib/notify';
+import {
+  notifyManagerNewOrder,
+  notifyCustomerStatusChanged,
+  notifyCustomerOrderReceived,
+  notifyCustomerPaymentPaid,
+} from '../../lib/notify';
 import { variantText } from '../../lib/order-summary';
 
 type TOrderItem = {
@@ -49,27 +54,33 @@ export default {
   async afterCreate(event: { result: Parameters<typeof updateComputedFields>[0] }) {
     await updateComputedFields(event.result);
     const fullOrder = await fetchFullOrder(event.result.id);
-    await notifyManagerNewOrder((fullOrder ?? event.result) as any);
+    const order = (fullOrder ?? event.result) as any;
+    await notifyManagerNewOrder(order);
+    await notifyCustomerOrderReceived(order);
   },
 
   async afterUpdate(event: { result: Parameters<typeof updateComputedFields>[0]; params: { data?: Record<string, unknown> } }) {
-    const dataKeys = Object.keys(event.params.data ?? {});
-    strapi.log.info(`[lifecycle] afterUpdate id=${event.result.id} keys=${JSON.stringify(dataKeys)}`);
+    const data = event.params.data ?? {};
 
-    // Skip if this update was triggered by updateComputedFields itself
-    if ('label' in (event.params.data ?? {}) || 'itemsSummary' in (event.params.data ?? {})) {
-      strapi.log.info('[lifecycle] afterUpdate: skipped (computed fields update)');
+    // Skip self-triggered computed-field writes (label/itemsSummary via raw db.query)
+    if ('label' in data || 'itemsSummary' in data) {
       return;
     }
 
     await updateComputedFields(event.result);
-    const newStatus = event.params.data?.orderStatus as string | undefined;
-    strapi.log.info(`[lifecycle] afterUpdate: newStatus=${newStatus}`);
 
-    if (newStatus) {
-      const fullOrder = await fetchFullOrder(event.result.id);
-      strapi.log.info(`[lifecycle] afterUpdate: telegramUserId=${(fullOrder as any)?.telegramUserId}`);
-      await notifyCustomerStatusChanged((fullOrder ?? event.result) as any, newStatus);
+    const fullOrder = await fetchFullOrder(event.result.id);
+    const order = (fullOrder ?? event.result) as any;
+
+    // Payment marked paid (manager-manual or Mono webhook) → stock decrement + DMs (idempotent)
+    if (data.paymentStatus === 'paid') {
+      await (strapi.service('api::order.order') as any).applyPaidSideEffects(order);
+      await notifyCustomerPaymentPaid(order);
+    }
+
+    // Order status changed → notify customer
+    if (typeof data.orderStatus === 'string') {
+      await notifyCustomerStatusChanged(order, data.orderStatus);
     }
   },
 };

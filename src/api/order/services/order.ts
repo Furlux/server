@@ -3,13 +3,6 @@ import { notifyManagerOrderPaid } from '../lib/notify';
 
 const MONO_API_URL = 'https://api.monobank.ua/api/merchant/invoice/create';
 
-const MONO_STATUS_MAP: Record<string, string> = {
-  success: 'processing',
-  failure: 'cancelled',
-  reversed: 'cancelled',
-  expired: 'cancelled',
-};
-
 const MONO_PAYMENT_STATUS_MAP: Record<string, string> = {
   success: 'paid',
   failure: 'failed',
@@ -86,7 +79,45 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
     };
   },
 
-  // inputs webhook data from Mono, does find order and update status, returns void
+  // inputs order, does decrement product stock + notify manager once (idempotent via stockDecrementedAt), returns void
+  async applyPaidSideEffects(order) {
+    if ((order as any).stockDecrementedAt) {
+      return; // already applied
+    }
+
+    type TOrderItem = { productSlug?: string | null; quantity: number };
+    const items = Array.isArray(order.items) ? (order.items as TOrderItem[]) : [];
+
+    for (const item of items) {
+      if (!item.productSlug) continue;
+
+      const products = await strapi.documents('api::product.product').findMany({
+        filters: { slug: { $eq: item.productSlug } },
+        limit: 1,
+      });
+
+      const product = products[0];
+      if (!product || product.stockQuantity == null) continue;
+
+      const newQty = Math.max(0, (product.stockQuantity ?? 0) - item.quantity);
+      await strapi.documents('api::product.product').update({
+        documentId: product.documentId,
+        data: { stockQuantity: newQty },
+      });
+
+      strapi.log.info(`Stock updated for "${item.productSlug}": ${product.stockQuantity} → ${newQty}`);
+    }
+
+    await notifyManagerOrderPaid(order as any);
+
+    // Mark applied via raw db query so this does NOT re-trigger the order afterUpdate lifecycle
+    await strapi.db.query('api::order.order').update({
+      where: { id: (order as any).id },
+      data: { stockDecrementedAt: new Date() },
+    });
+  },
+
+  // inputs webhook data from Mono, does find order and set paymentStatus (side effects run in afterUpdate), returns void
   async handleMonoWebhook(webhookData) {
     const { invoiceId, status } = webhookData;
 
@@ -107,58 +138,28 @@ export default factories.createCoreService('api::order.order', ({ strapi }) => (
 
     const order = orders[0];
 
-    // Idempotency: skip if already processed to prevent duplicate stock deduction and notifications
+    // Idempotency: skip if already paid
     if ((order as any).paymentStatus === 'paid') {
       strapi.log.info(`Mono webhook: order ${order.documentId} already paid, skipping`);
       return;
     }
 
-    const newStatus = MONO_STATUS_MAP[status];
     const newPaymentStatus = MONO_PAYMENT_STATUS_MAP[status];
-
-    if (!newStatus) {
+    if (!newPaymentStatus) {
       strapi.log.info(`Mono webhook: unmapped status "${status}" for order ${order.documentId}`);
       return;
     }
 
+    const data: any = { paymentStatus: newPaymentStatus };
+    if (newPaymentStatus === 'failed') data.orderStatus = 'cancelled';
+
+    // Side effects (stock decrement + notifications) run in the order afterUpdate lifecycle on paymentStatus=paid
     await strapi.documents('api::order.order').update({
       documentId: order.documentId,
-      data: {
-        orderStatus: newStatus,
-        paymentStatus: (newPaymentStatus ?? 'pending') as 'pending' | 'paid' | 'failed',
-      } as any,
+      data,
     });
 
-    strapi.log.info(`Order ${order.documentId} status updated to "${newStatus}" via Mono webhook`);
-
-    if (status === 'success') {
-      await notifyManagerOrderPaid(order as any);
-    }
-
-    type TOrderItem = { productSlug?: string | null; quantity: number };
-    const items = Array.isArray(order.items) ? (order.items as TOrderItem[]) : [];
-
-    if (status === 'success' && items.length > 0) {
-      for (const item of items) {
-        if (!item.productSlug) continue;
-
-        const products = await strapi.documents('api::product.product').findMany({
-          filters: { slug: { $eq: item.productSlug } },
-          limit: 1,
-        });
-
-        const product = products[0];
-        if (!product || product.stockQuantity == null) continue;
-
-        const newQty = Math.max(0, (product.stockQuantity ?? 0) - item.quantity);
-        await strapi.documents('api::product.product').update({
-          documentId: product.documentId,
-          data: { stockQuantity: newQty },
-        });
-
-        strapi.log.info(`Stock updated for "${item.productSlug}": ${product.stockQuantity} → ${newQty}`);
-      }
-    }
+    strapi.log.info(`Order ${order.documentId} paymentStatus → ${newPaymentStatus} via Mono webhook`);
   },
 
   // inputs order, does fetch real invoice status from Mono and apply it via the webhook handler, returns summary
