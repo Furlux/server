@@ -37,6 +37,17 @@ const backfillOrders = async (strapi: Core.Strapi): Promise<number> => {
   return orders.length;
 };
 
+// inputs strapi, does migrate legacy order statuses to the new lifecycle values (idempotent), returns count migrated
+const migrateOrderStatuses = async (strapi: Core.Strapi): Promise<number> => {
+  const map: Record<string, string> = { processing: 'assembling', shipped: 'shipping' };
+  let migrated = 0;
+  for (const [from, to] of Object.entries(map)) {
+    const res = await strapi.db.query(ORDER_UID).updateMany({ where: { orderStatus: from }, data: { orderStatus: to } });
+    migrated += (res as { count?: number })?.count ?? 0;
+  }
+  return migrated;
+};
+
 // inputs strapi, does write content manager admin config for orders to plugin store, returns void
 const configureOrderAdminView = async (strapi: Core.Strapi) => {
   const pluginStore = strapi.store({ environment: '', type: 'plugin', name: 'content-manager' });
@@ -149,6 +160,11 @@ export default {
     guardAdminPasswordChanges(strapi);
 
     await configureOrderAdminView(strapi);
+
+    const migrated = await migrateOrderStatuses(strapi);
+    if (migrated > 0) {
+      strapi.log.info(`Migrated ${migrated} orders to new status values`);
+    }
 
     const count = await backfillOrders(strapi);
     if (count > 0) {

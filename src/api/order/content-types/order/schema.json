@@ -17,7 +17,7 @@
     },
     "orderStatus": {
       "type": "enumeration",
-      "enum": ["pending", "processing", "shipped", "delivered", "cancelled"],
+      "enum": ["pending", "approved", "assembling", "shipping", "delivered", "cancelled"],
       "default": "pending",
       "required": true
     },
@@ -71,6 +71,12 @@
     },
     "monoInvoiceId": {
       "type": "string"
+    },
+    "stockDecrementedAt": {
+      "type": "datetime",
+      "pluginOptions": {
+        "content-manager": { "editable": false }
+      }
     },
     "paymentStatus": {
       "type": "enumeration",
