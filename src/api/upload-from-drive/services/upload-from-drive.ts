@@ -3,6 +3,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import crypto from 'crypto';
+import sharp from 'sharp';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const heicConvert = require('heic-convert');
 
@@ -77,6 +78,20 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       filename = filename.replace(/\.(heic|heif)$/i, converted.ext);
       if (!filename.toLowerCase().endsWith(converted.ext)) {
         filename = `${filename}${converted.ext}`;
+      }
+    }
+
+    // Normalize EXIF orientation: iPhone photos store rotation as a metadata tag
+    // (Orientation 1–8) instead of rotating pixels. Strapi's image variants are
+    // generated via sharp without an explicit .rotate() call, so the tag gets
+    // dropped and previews appear sideways. sharp().rotate() (no args) applies
+    // the EXIF orientation to the pixels and strips the tag — making the buffer
+    // self-describing for downstream consumers.
+    if (contentType.startsWith('image/')) {
+      try {
+        buffer = await sharp(buffer, { failOn: 'none' }).rotate().toBuffer();
+      } catch (e) {
+        strapi.log.warn(`[upload-from-drive] sharp rotate failed for ${filename}, using original buffer: ${String(e)}`);
       }
     }
 
