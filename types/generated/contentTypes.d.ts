@@ -613,7 +613,14 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     monoInvoiceId: Schema.Attribute.String;
     orderStatus: Schema.Attribute.Enumeration<
-      ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
+      [
+        'pending',
+        'approved',
+        'assembling',
+        'shipping',
+        'delivered',
+        'cancelled',
+      ]
     > &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'pending'>;
@@ -621,6 +628,12 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
       Schema.Attribute.DefaultTo<'pending'>;
     phone: Schema.Attribute.String & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
+    stockDecrementedAt: Schema.Attribute.DateTime &
+      Schema.Attribute.SetPluginOptions<{
+        'content-manager': {
+          editable: false;
+        };
+      }>;
     streetAddress: Schema.Attribute.String;
     telegramUserId: Schema.Attribute.BigInteger & Schema.Attribute.Required;
     totalPrice: Schema.Attribute.Decimal & Schema.Attribute.Required;
@@ -744,6 +757,8 @@ export interface ApiProductProduct extends Struct.CollectionTypeSchema {
         '\u043E\u0432\u0435\u0440\u0441\u0430\u0439\u0437',
         '\u043C\u0430\u0441\u043A\u0430',
         '\u043A\u0456\u0448\u043A\u0430',
+        '\u043F\u0430\u043D\u0442\u043E',
+        '\u043A\u043B\u0430\u0431\u043C\u0430\u0441\u0442\u0435\u0440',
       ]
     >;
     frameType: Schema.Attribute.Enumeration<
